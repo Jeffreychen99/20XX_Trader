@@ -16,7 +16,7 @@ us_holidays = holidays.US()
 
 
 # CONFIG
-STOCK_TICKER = 'AMC'
+STOCK_TICKER = 'PLTR'
 TRADER_MODE = 'dev'
 
 
@@ -63,7 +63,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 
 	prev_target = 0.0
 	prev_trade_type = ''
-	next_trade_time = datetime.datetime.now()
+	next_prediction_time = datetime.datetime.now()
 	while (1):
 
 		order = {
@@ -83,14 +83,18 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			print("AFTER HOURS TRADING - NO ACTION")
 			print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
 			value = cash + stock_quote['lastTrade'] * shares 
-			time.sleep(300)
+			try:
+				time.sleep(3)
+			except KeyboardInterrupt:
+				break
 			continue
 
-		print("---\nCURRENT = $%.2f" % curr_price, end=' | ')
+		print("---\n %s" % datetime.datetime.now().strftime("%H:%M,  %m/%d/%Y"))
+		print("CURRENT = $%.2f" % curr_price, end=' | ')
 
 		quantity = 0
 		new_prediction = False
-		if next_trade_time < datetime.datetime.now():
+		if next_prediction_time < datetime.datetime.now():
 			# Time for a new prediction
 			new_prediction = True
 			price_target = get_stock_prediction(stock_ticker, model)
@@ -106,13 +110,13 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			if prev_trade_type == 'BUY' and curr_price >= prev_target:
 				print("PRICE MET TARGET OF $%.2f" % prev_target)
 				order["order_action"] = "SELL"
-				price_target -= 1
+				quantity = shares
 			elif prev_trade_type == 'SELL' and curr_price < prev_target:
 				print("PRICE FELL BELOW TARGET OF $%.2f" % prev_target)
 				order["order_action"] = "BUY"
-				price_target += 1
+				quantity = int(cash // curr_price)
 			else:
-				print("PRICE TARGET NOT YET MET - NO ACTION TAKEN")
+				print("PRICE TARGET $%.2f NOT YET MET" % prev_target)
 
 		order["quantity"] = str(quantity)
 		if quantity > 0 and order["order_action"]:
@@ -127,13 +131,13 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			prev_target = price_target
 			prev_trade_type = order["order_action"]
 			if new_prediction:
-				next_trade_time = datetime.datetime.now() + datetime.timedelta(minutes=10)
+				next_prediction_time = datetime.datetime.now() + datetime.timedelta(minutes=10)
 			else:
-				next_trade_time = datetime.datetime.now()
+				next_prediction_time = datetime.datetime.now()
 
 		# Update the value
 		value = cash + curr_price * shares
-		print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
+		print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % (shares * curr_price, cash, value))
 
 		try:
 			time.sleep(60)
