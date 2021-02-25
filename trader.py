@@ -6,7 +6,7 @@ import json
 
 from model_tf import *
 from data_util import *
-from auth import oauth
+from etrade.auth import oauth
 from etrade.accounts import Accounts
 from etrade.market import Market
 from etrade.order import Order
@@ -76,7 +76,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		}
 
 		stock_quote = market.quotes(stock_ticker)
-		curr_price = round(stock_quote['lastTrade'], 2)
+		curr_price = stock_quote['lastTrade']
 		price_target = stock_quote['lastTrade']
 
 		if not is_trading_hour():
