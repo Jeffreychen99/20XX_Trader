@@ -75,6 +75,7 @@ def generate_model(stock_ticker):
 
 # Train the model (and validate)
 def train_model(model, model_data):
+	print("************** TRAINING MODEL **************")
 	training_x, training_y, validation_x, validation_y = model_data
 	model.fit(training_x, training_y, epochs=MAX_EPOCHS, validation_data=(validation_x, validation_y))
 
@@ -120,4 +121,4 @@ if __name__ == '__main__':
 	model, model_data = generate_model(stock_ticker)
 	train_model(model, model_data)
 
-	eval_model(model, model_data)
+	eval_model(stock_ticker, model, model_data)
