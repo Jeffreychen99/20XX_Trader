@@ -79,7 +79,7 @@ def train_model(model, model_data):
 	model.fit(training_x, training_y, epochs=MAX_EPOCHS, validation_data=(validation_x, validation_y))
 
 # Evaluate model
-def eval_model(model, model_data):
+def eval_model(stock_ticker, model, model_data):
 	training_x, training_y, validation_x, validation_y = model_data
 	v_predict = model.predict(validation_x)
 	indices = list(range(len(v_predict)))
