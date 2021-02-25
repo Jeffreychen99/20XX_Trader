@@ -55,17 +55,17 @@ def clean_data(stock_raw):
     r = len(stock_raw) % POINTS_PER_PERIOD
     for _ in range(r):
         stock_raw = np.delete(stock_raw, 0, 0)
-    stock_raw_shape = (len(stock_raw) // POINTS_PER_PERIOD, POINTS_PER_PERIOD, stock_raw.shape[1])
+    dat_shape = (len(stock_raw) // POINTS_PER_PERIOD, POINTS_PER_PERIOD, stock_raw.shape[1])
 
-    stock_dat = np.ndarray(shape=stock_raw_shape, dtype=float)
-    stock_labels = np.zeros(shape=(stock_raw_shape[0], 1))
-    for i in range(stock_raw_shape[0]):
+    stock_dat = np.ndarray(shape=dat_shape, dtype=np.float64)
+    stock_labels = np.zeros(shape=(dat_shape[0], 1))
+    for i in range(len(stock_raw)):
         r, t = i // POINTS_PER_PERIOD, i % POINTS_PER_PERIOD
         stock_dat[r][t] = stock_raw[i]
-    for i in range(stock_raw_shape[0] - 1):
+    for i in range(dat_shape[0] - 1):
         stock_labels[i] = LABEL_FUNC(stock_dat[i + 1])
         
-    if len(stock_dat) > 1:
+    if dat_shape[0] > 1:
         stock_dat = stock_dat[:-1]
         stock_labels = stock_labels[:-1]
     return stock_dat, stock_labels
@@ -119,7 +119,7 @@ def recent_stock_data(stock_ticker):
     stock = yf.Ticker(stock_ticker)
     stock_raw = np.ndarray(shape=(0, NUM_FEATURES))
 
-    period = str(POINTS_PER_PERIOD) + UNITS
+    period = str(2 * POINTS_PER_PERIOD - 1) + UNITS
     stock_df = stock.history(period=period, interval=INTERVAL)
     stock_raw = stock_df.to_numpy()[:,:NUM_FEATURES]
 
