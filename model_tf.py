@@ -15,7 +15,7 @@ np.random.seed(150)
 
 
 # Training params
-MAX_EPOCHS = 150
+MAX_EPOCHS = 100
 PATIENCE = 2
 TRAINING_SET_THRESH = 0.85
 
