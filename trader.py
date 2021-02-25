@@ -83,8 +83,9 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		}
 
 		stock_quote = market.quotes(stock_ticker)
+		curr_price = round(stock_quote['lastTrade'], 2)
 		price_target = stock_quote['lastTrade']
-		print("---\nCURRENT = $%.2f" % stock_quote['lastTrade'], end=' | ')
+		print("---\nCURRENT = $%.2f" % curr_price, end=' | ')
 
 		quantity = 0
 		new_prediction = False
@@ -93,19 +94,19 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			new_prediction = True
 			price_target = get_stock_prediction(stock_ticker, model)
 			print("NEW PREDICTION = $%.2f" % price_target)
-			if price_target > stock_quote['lastTrade']:
+			if price_target > curr_price:
 				order["order_action"] = "BUY"
-				quantity = int(cash // stock_quote['lastTrade'])
+				quantity = int(cash // curr_price)
 			else:
 				order["order_action"] = "SELL"
 				quantity = shares
 		else:
 			# Make decision based on previous prediction
-			if prev_trade_type == 'BUY' and stock_quote['lastTrade'] >= prev_target:
+			if prev_trade_type == 'BUY' and curr_price >= prev_target:
 				print("PRICE MET TARGET OF $%.2f" % prev_target)
 				order["order_action"] = "SELL"
 				price_target -= 1
-			elif prev_trade_type == 'SELL' and stock_quote['lastTrade'] < prev_target:
+			elif prev_trade_type == 'SELL' and curr_price < prev_target:
 				print("PRICE FELL BELOW TARGET OF $%.2f" % prev_target)
 				order["order_action"] = "BUY"
 				price_target += 1
@@ -115,13 +116,14 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		order["quantity"] = str(quantity)
 		if quantity > 0 and order["order_action"]:
 			# EXECUTE THE ORDER
-			p_tuple = (order["order_action"], quantity, stock_quote['lastTrade'])
+			p_tuple = (order["order_action"], quantity, curr_price)
 			print("--> %s %s shares @ $%.2f" % p_tuple)
 
 			order_type = 1 if order["order_action"] == "BUY" else -1
 			shares += quantity * order_type
-			cash -= quantity * stock_quote['lastTrade'] * order_type
-
+			cash -= quantity * curr_price * order_type
+ 
+			prev_target = price_target
 			prev_trade_type = order["order_action"]
 			if new_prediction:
 				next_trade_time = datetime.datetime.now() + datetime.timedelta(minutes=10)
@@ -129,9 +131,8 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 				next_trade_time = datetime.datetime.now()
 
 		# Update the value
-		value = cash + stock_quote['lastTrade'] * shares 
-		prev_target = price_target
-		print("SHARES = %d, CASH = %.2f, VALUE = %.2f\n"  % (shares, cash, value))
+		value = cash + curr_price * shares
+		print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
 
 		try:
 			time.sleep(60)
@@ -139,11 +140,11 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			break
 
 	print("\n\n********************* TRADING SUMMARY *********************")
-	print("STARTING VALUE: $", init_cash)
-	print("ENDING VALUE:   $", value)
+	print("STARTING VALUE:  $", init_cash)
+	print("ENDING VALUE:    $", value)
 	print("")
 	r = (value/init_cash - 1) * 100
-	print("TOTAL'S RETURN:   %.2f" % r)
+	print("TOTAL'S RETURN:  %% %.2f" % r)
 	print("***********************************************************")
 
 
@@ -154,16 +155,17 @@ if __name__ == '__main__':
 	STOCK_TICKER = STOCK_TICKER.upper()
 
 	model, model_data = generate_model(STOCK_TICKER)
-	#train_model(model, model_data)
-	#eval_model(model, model_data)
+	train_model(model, model_data)
+	eval_model(STOCK_TICKER, model, model_data)
 
 	session, base_url = oauth()
 	market = Market(session, base_url)
 	accounts = Accounts(session, base_url)
+
 	# Select account
 	accounts.account_list()
-
-	#ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (Y/N): ").lower()
+	
+	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (Y/N): ").lower()
 	ask_continue = 'y'
 	if ask_continue != 'y':
 		exit(0)
@@ -180,6 +182,6 @@ if __name__ == '__main__':
 		"limit_price":"",
 		"quantity": "1"
 	}
-	orders.place_order(order)
+	#orders.place_order(order)
 
 	
