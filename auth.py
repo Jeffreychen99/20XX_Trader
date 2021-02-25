@@ -8,8 +8,6 @@ import sys
 import requests
 from rauth import OAuth1Service
 from logging.handlers import RotatingFileHandler
-from accounts.accounts import Accounts
-from market.market import Market
 
 # loading configuration file
 config = configparser.ConfigParser()

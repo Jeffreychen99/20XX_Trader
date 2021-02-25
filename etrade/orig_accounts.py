@@ -77,8 +77,7 @@ class Accounts:
                             self.account = accounts[int(account_index) - 1]
                         else:
                             self.account = accounts[int(account_index) - 1]
-                        break
-
+                        self.account_menu()
                     elif account_index == str(count):
                         break
                     else:
@@ -234,3 +233,66 @@ class Accounts:
                 print("Error: " + response.json()["Error"]["message"])
             else:
                 print("Error: Balance API service error")
+
+    def account_menu(self):
+        """
+        Provides the different options for the sample application: balance, portfolio, view orders
+
+        :param self: Pass in authenticated session and information on selected account
+        """
+
+        if self.account["institutionType"] == "BROKERAGE":
+            menu_items = {"1": "Balance",
+                          "2": "Portfolio",
+                          "3": "Orders",
+                          "4": "Go Back"}
+
+            while True:
+                print("")
+                options = menu_items.keys()
+                for entry in options:
+                    print(entry + ")\t" + menu_items[entry])
+
+                selection = input("Please select an option: ")
+                if selection == "1":
+                    self.balance()
+                elif selection == "2":
+                    self.portfolio()
+                elif selection == "3":
+                    order = Order(self.session, self.account, self.base_url)
+                    order.view_orders()
+                elif selection == "4":
+                    break
+                else:
+                    print("Unknown Option Selected!")
+        elif self.account["institutionType"] == "BANK":
+            menu_items = {"1": "Balance",
+                          "2": "Go Back"}
+
+            while True:
+                print("\n")
+                options = menu_items.keys()
+                for entry in options:
+                    print(entry + ")\t" + menu_items[entry])
+
+                selection = input("Please select an option: ")
+                if selection == "1":
+                    self.balance()
+                elif selection == "2":
+                    break
+                else:
+                    print("Unknown Option Selected!")
+        else:
+            menu_items = {"1": "Go Back"}
+
+            while True:
+                print("")
+                options = menu_items.keys()
+                for entry in options:
+                    print(entry + ")\t" + menu_items[entry])
+
+                selection = input("Please select an option: ")
+                if selection == "1":
+                    break
+                else:
+                    print("Unknown Option Selected!")

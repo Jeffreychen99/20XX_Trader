@@ -7,9 +7,9 @@ import json
 from model_tf import *
 from data_util import *
 from auth import oauth
-from accounts.accounts import Accounts
-from market.market import Market
-from order.order import Order
+from etrade.accounts import Accounts
+from etrade.market import Market
+from etrade.order import Order
 
 tz = pytz.timezone('US/Eastern')
 us_holidays = holidays.US()
