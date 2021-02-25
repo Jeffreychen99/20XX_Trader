@@ -65,13 +65,6 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 	prev_trade_type = ''
 	next_trade_time = datetime.datetime.now()
 	while (1):
-		if not is_trading_hour():
-			# Update the value
-			prev_trade_time = None
-			value = cash + stock_quote['lastTrade'] * shares 
-			#time.sleep(300)
-			#continue
-			pass
 
 		order = {
 			"price_type": "MARKET",
@@ -85,6 +78,14 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		stock_quote = market.quotes(stock_ticker)
 		curr_price = round(stock_quote['lastTrade'], 2)
 		price_target = stock_quote['lastTrade']
+
+		if not is_trading_hour():
+			print("AFTER HOURS TRADING - NO ACTION")
+			print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
+			value = cash + stock_quote['lastTrade'] * shares 
+			time.sleep(300)
+			continue
+
 		print("---\nCURRENT = $%.2f" % curr_price, end=' | ')
 
 		quantity = 0
@@ -164,7 +165,7 @@ if __name__ == '__main__':
 
 	# Select account
 	accounts.account_list()
-	
+
 	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (Y/N): ").lower()
 	ask_continue = 'y'
 	if ask_continue != 'y':
