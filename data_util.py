@@ -2,10 +2,12 @@ import datetime
 import yfinance as yf
 import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
-from torch.utils.data import sampler
+
+if MODEL_TYPE == 'TORCH':
+    import torch
+    from torch.utils.data import DataLoader
+    from torch.utils.data import Dataset
+    from torch.utils.data import sampler
 
 from config_20XX import *
 
@@ -15,32 +17,32 @@ warnings.filterwarnings('ignore')
 np.random.seed(150)
 
 
-
-class StockDataset(Dataset):
-    def __init__(self, data, labels, transform=None):
-        self.data = torch.from_numpy(data).float()
-        self.target = torch.from_numpy(labels).long()
-        self.transform = transform
+if MODEL_TYPE == 'TORCH':
+    class StockDataset(Dataset):
+        def __init__(self, data, labels, transform=None):
+            self.data = torch.from_numpy(data).float()
+            self.target = torch.from_numpy(labels).long()
+            self.transform = transform
+            
+        def __getitem__(self, index):
+            x = self.data[index]
+            y = self.target[index]
+            
+            if self.transform:
+                x = self.transform(x)
+            
+            return x, y
         
-    def __getitem__(self, index):
-        x = self.data[index]
-        y = self.target[index]
-        
-        if self.transform:
-            x = self.transform(x)
-        
-        return x, y
-    
-    def __len__(self):
-        return len(self.data)
+        def __len__(self):
+            return len(self.data)
 
 
-# Turn numpy arrays into pytorch dataset and loader
-def get_dataset_and_loader(data, labels):
-    dataset = StockDataset(data, labels)
-    n = len(data)
-    loader = DataLoader(dataset, sampler=sampler.SubsetRandomSampler(range(n)))
-    return dataset, loader
+    # Turn numpy arrays into pytorch dataset and loader
+    def get_dataset_and_loader(data, labels):
+        dataset = StockDataset(data, labels)
+        n = len(data)
+        loader = DataLoader(dataset, sampler=sampler.SubsetRandomSampler(range(n)))
+        return dataset, loader
 
 
 # Data cleaning
