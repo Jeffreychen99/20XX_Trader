@@ -80,6 +80,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		price_target = stock_quote['lastTrade']
 
 		if not is_trading_hour():
+			print("---\n %s" % datetime.datetime.now().strftime("%H:%M,  %m/%d/%Y"))
 			print("AFTER HOURS TRADING - NO ACTION")
 			print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
 			value = cash + stock_quote['lastTrade'] * shares 
