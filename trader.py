@@ -4,13 +4,17 @@ import sys
 import yfinance as yf
 import json
 
-from config_20XX import *
-from model_tf import *
-from data_util import *
 from etrade.auth import oauth
 from etrade.accounts import Accounts
 from etrade.market import Market
 from etrade.order import Order
+
+from config_20XX import *
+if MODEL_TYPE == 'TF':
+	from model_tf import *
+elif MODEL_TYPE == 'TORCH':
+	from model_pytorch import *
+from data_util import *
 
 tz = pytz.timezone('US/Eastern')
 us_holidays = holidays.US()
@@ -130,7 +134,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			prev_trade_type = order["order_action"]
 			if new_prediction:
 				prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
-				next_prediction_time = datetime.datetime.now() + predictoin_interval
+				next_prediction_time = datetime.datetime.now() + prediction_interval
 			else:
 				next_prediction_time = datetime.datetime.now()
 
