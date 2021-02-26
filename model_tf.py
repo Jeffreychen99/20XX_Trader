@@ -28,23 +28,16 @@ def elliptic_paraboloid_loss(x, y):
 
 
 # Create the model
-def generate_model(stock_ticker):
-	stock_raw, stock_dat, stock_labels = model_stock_data(stock_ticker)
-	model_data = partition_data(TRAINING_SET_THRESH, stock_dat, stock_labels)
-	training_x, training_y, validation_x, validation_y = model_data
-
-	frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
-
-
+def generate_model(input_shape):
 	# Model definition
 	l1 = tf.keras.regularizers.l1
 	l2 = tf.keras.regularizers.l2
 	model = tf.keras.models.Sequential([
 	    # Shape [batch, time, features] => [batch, time, lstm_units]
-	    tf.keras.layers.LSTM(4, input_shape=frame_shape, return_sequences=True, activation='relu'),
-	    tf.keras.layers.LSTM(8, input_shape=frame_shape, return_sequences=True, activation='tanh'),
-	    tf.keras.layers.LSTM(16, input_shape=frame_shape, return_sequences=True, activation='tanh'),
-	    tf.keras.layers.LSTM(32, input_shape=frame_shape, return_sequences=False, activation='relu'),
+	    tf.keras.layers.LSTM(4, input_shape=input_shape, return_sequences=True, activation='relu'),
+	    tf.keras.layers.LSTM(8, input_shape=input_shape, return_sequences=True, activation='tanh'),
+	    tf.keras.layers.LSTM(16, input_shape=input_shape, return_sequences=True, activation='tanh'),
+	    tf.keras.layers.LSTM(32, input_shape=input_shape, return_sequences=False, activation='relu'),
 	    #tf.keras.layers.Dense(7, input_shape=frame_shape),
 	    tf.keras.layers.Dense(units=256, activation='relu'),
 	    tf.keras.layers.Dropout(0.25),
@@ -64,27 +57,25 @@ def generate_model(stock_ticker):
 	                optimizer=tf.optimizers.Adam(),
 	                metrics=[elliptic_paraboloid_loss])
 
-	return model, model_data
+	return model
 
 
 # Train the model (and validate)
-def train_model(model, model_data):
+def train_model(model, train_x, train_y, val_x, val_y):
 	print("************** TRAINING MODEL **************")
-	training_x, training_y, validation_x, validation_y = model_data
-	model.fit(training_x, training_y, epochs=MAX_EPOCHS, validation_data=(validation_x, validation_y))
+	model.fit(train_x, train_y, epochs=MAX_EPOCHS, validation_data=(val_x, val_y))
 
 # Evaluate model
-def eval_model(stock_ticker, model, model_data):
-	training_x, training_y, validation_x, validation_y = model_data
-	v_predict = model.predict(validation_x)
-	indices = list(range(len(v_predict)))
+def eval_model(stock_ticker, model, test_x, test_y):
+	test_predict = model.predict(test_x)
+	indices = list(range(len(test_predict)))
 
 	buys, sells = [0, 0], [0, 0]
 	all_trades = [buys, sells]
 
-	for i in range(len(v_predict)):
-		trade_type = int(v_predict[i] <= 0)
-		trade_result = int(v_predict[i] * validation_y[i] >= 0)
+	for i in range(len(test_predict)):
+		trade_type = int(test_predict[i] <= 0)
+		trade_result = int(test_predict[i] * test_y[i] >= 0)
 		all_trades[trade_type][trade_result] += 1
 	            
 	print("")
@@ -95,9 +86,9 @@ def eval_model(stock_ticker, model, model_data):
 	ax = plt.axes()
 	ax.set_xlabel("Time")
 	ax.set_ylabel("Price Deviation")
-	plt.plot(indices, [y[0] for y in v_predict], 'b-', marker='.', label='Predict')
-	plt.plot(indices, [y[0] for y in validation_y], 'r-', marker='.', label='Actual')
-	plt.plot(indices, [0 for _ in v_predict], 'k-')
+	plt.plot(indices, [y[0] for y in test_predict], 'b-', marker='.', label='Predict')
+	plt.plot(indices, [y[0] for y in test_y], 'r-', marker='.', label='Actual')
+	plt.plot(indices, [0 for _ in test_predict], 'k-')
 	plt.legend()
 	plt.show()
 
@@ -112,7 +103,12 @@ if __name__ == '__main__':
 
 	stock_ticker = sys.argv[1]
 
-	model, model_data = generate_model(stock_ticker)
-	train_model(model, model_data)
+	stock_raw, stock_dat, stock_labels = model_stock_data(stock_ticker)
+	train_x, train_y, test_x, test_y = partition_data(TRAINING_SET_THRESH, stock_dat, stock_labels)
+	train_x, train_y, val_x, val_y = partition_data(TRAINING_SET_THRESH, train_x, train_y)
+	input_frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
 
-	eval_model(stock_ticker, model, model_data)
+	model = generate_model(input_frame_shape)
+	train_model(model, train_x, train_y, val_x, val_y)
+
+	eval_model(stock_ticker, model, test_x, test_y)

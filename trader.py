@@ -158,9 +158,14 @@ if __name__ == '__main__':
 		STOCK_TICKER = sys.argv[1]
 	STOCK_TICKER = STOCK_TICKER.upper()
 
-	model, model_data = generate_model(STOCK_TICKER)
-	train_model(model, model_data)
-	eval_model(STOCK_TICKER, model, model_data)
+	stock_raw, stock_dat, stock_labels = model_stock_data(STOCK_TICKER)
+	train_x, train_y, test_x, test_y = partition_data(TRAINING_SET_THRESH, stock_dat, stock_labels)
+	train_x, train_y, val_x, val_y = partition_data(TRAINING_SET_THRESH, train_x, train_y)
+	input_frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
+
+	model = generate_model(input_frame_shape)
+	train_model(model, train_x, train_y, val_x, val_y)
+	eval_model(STOCK_TICKER, model, test_x, test_y)
 
 	session, base_url = oauth()
 	market = Market(session, base_url)
