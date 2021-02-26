@@ -9,21 +9,10 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
+from config_20XX import *
 from data_util import *
 
 
-
-# Training params
-MAX_EPOCHS = 20
-PATIENCE = 2
-TRAINING_SET_THRESH = 0.85
-LEARNING_RATE = 1e-3
-MOMENTUM = 0.95
-USE_GPU = True
-PRINT_EVERY = 100
-
-C_DIFF_SIGN = 1
-C_SAME_SIGN = 3
 
 dtype = torch.float32
 if USE_GPU and torch.cuda.is_available():

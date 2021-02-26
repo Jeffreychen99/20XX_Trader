@@ -7,20 +7,13 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from torch.utils.data import sampler
 
+from config_20XX import *
+
 import warnings
 warnings.filterwarnings('ignore')
 
 np.random.seed(150)
 
-
-# Data params
-NUM_FEATURES = 4
-NUM_WEEKS = 3
-UNITS = 'm'
-INTERVAL_UNITS = 1
-INTERVAL = str(INTERVAL_UNITS) + UNITS
-POINTS_PER_PERIOD = 10
-LABEL_FUNC = np.mean
 
 
 class StockDataset(Dataset):

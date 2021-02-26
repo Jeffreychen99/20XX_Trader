@@ -6,6 +6,8 @@ kb = tf.keras.backend
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import matplotlib.pyplot as plt
 
+from config_20XX import *
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -13,14 +15,6 @@ from data_util import *
 
 np.random.seed(150)
 
-
-# Training params
-MAX_EPOCHS = 100
-PATIENCE = 2
-TRAINING_SET_THRESH = 0.85
-
-C_DIFF_SIGN = 0.5
-C_SAME_SIGN = 0.1
 
 
 # Custom loss function to reward correct sign
