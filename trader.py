@@ -87,7 +87,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 				break
 			continue
 
-		print("---\n %s" % datetime.datetime.now().strftime("%H:%M,  %m/%d/%Y"))
+		print("---\n %s" % datetime.datetime.now(tz).strftime("%H:%M,  %m/%d/%Y"))
 		print("CURRENT = $%.2f" % curr_price, end=' | ')
 
 		quantity = 0
