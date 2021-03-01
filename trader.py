@@ -77,6 +77,9 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		}
 
 		stock_quote = market.quotes(stock_ticker)
+		if not stock_quote:
+			# Error with the API - retry
+			continue
 		curr_price = stock_quote['lastTrade']
 		price_target = stock_quote['lastTrade']
 
