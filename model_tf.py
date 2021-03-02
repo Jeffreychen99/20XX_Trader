@@ -66,7 +66,7 @@ def train_model(model, train_x, train_y, val_x, val_y):
 	model.fit(train_x, train_y, epochs=MAX_EPOCHS, validation_data=(val_x, val_y))
 
 # Evaluate model
-def eval_model(stock_ticker, model, test_x, test_y):
+def eval_model(stock_ticker, model, test_x, test_y, display=False):
 	test_predict = model.predict(test_x)
 	indices = list(range(len(test_predict)))
 
@@ -82,15 +82,16 @@ def eval_model(stock_ticker, model, test_x, test_y):
 	print("CORRECT BUYS:  %d  |  WRONG BUYS:    %d" % (buys[1], buys[0]))
 	print("CORRECT SELLS: %d  |  WRONG SELLS:   %d" % (sells[1], sells[0]))
 
-	plt.title(stock_ticker + " Stock Prediction")
-	ax = plt.axes()
-	ax.set_xlabel("Time")
-	ax.set_ylabel("Price Deviation")
-	plt.plot(indices, [y[0] for y in test_predict], 'b-', marker='.', label='Predict')
-	plt.plot(indices, [y[0] for y in test_y], 'r-', marker='.', label='Actual')
-	plt.plot(indices, [0 for _ in test_predict], 'k-')
-	plt.legend()
-	plt.show()
+	if display:
+		plt.title(stock_ticker + " Stock Prediction")
+		ax = plt.axes()
+		ax.set_xlabel("Time")
+		ax.set_ylabel("Price Deviation")
+		plt.plot(indices, [y[0] for y in test_predict], 'b-', marker='.', label='Predict')
+		plt.plot(indices, [y[0] for y in test_y], 'r-', marker='.', label='Actual')
+		plt.plot(indices, [0 for _ in test_predict], 'k-')
+		plt.legend()
+		plt.show()
 
 
 
@@ -111,4 +112,4 @@ if __name__ == '__main__':
 	model = generate_model(input_frame_shape)
 	train_model(model, train_x, train_y, val_x, val_y)
 
-	eval_model(stock_ticker, model, test_x, test_y)
+	eval_model(stock_ticker, model, test_x, test_y, display=True)
