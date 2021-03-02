@@ -177,12 +177,12 @@ if __name__ == '__main__':
 	# Select account
 	accounts.account_list()
 
-	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (Y/N): ").lower()
+	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (y/n): ").lower()
 	ask_continue = 'y'
 	if ask_continue != 'y':
 		exit(0)
 
-	trading_loop(STOCK_TICKER, model, init_cash=300.0)
+	trading_loop(STOCK_TICKER, model, init_cash=INIT_CASH)
 
 	
 	orders = Order(session, accounts.account, base_url)
