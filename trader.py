@@ -84,7 +84,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		price_target = stock_quote['lastTrade']
 
 		if not is_trading_hour():
-			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M,  %m/%d/%Y"))
+			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			print("AFTER HOURS TRADING - NO ACTION")
 			print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (shares * curr_price, cash, value))
 			value = cash + stock_quote['lastTrade'] * shares 
@@ -94,7 +94,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 				break
 			continue
 
-		print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M,  %m/%d/%Y"))
+		print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 		print("CURRENT = $%.2f" % curr_price)
 
 		# Make decision based on previous prediction
@@ -119,6 +119,9 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 				order["order_action"] = "SELL"
 				quantity = shares
 
+			prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
+			next_prediction_time = datetime.datetime.now() + prediction_interval
+
 		if quantity > 0 and order["order_action"]:
 			# EXECUTE THE ORDER
 			order["quantity"] = str(quantity)
@@ -133,9 +136,6 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
  
 			prev_target = price_target
 			prev_trade_type = order["order_action"]
-
-			prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
-			next_prediction_time = datetime.datetime.now() + prediction_interval
 
 		# Update the value
 		value = cash + curr_price * shares
