@@ -62,7 +62,7 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 
 	orders = Order(session, accounts.account, base_url)
 
-	prev_target = None
+	price_target = 0.0
 	prev_trade_type = ''
 	next_prediction_time = datetime.datetime.now()
 	while (1):
@@ -81,7 +81,6 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			# Error with the API - retry
 			continue
 		curr_price = stock_quote['lastTrade']
-		price_target = stock_quote['lastTrade']
 
 		if not is_trading_hour():
 			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
@@ -98,14 +97,14 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 		print("CURRENT = $%.2f" % curr_price)
 
 		# Make decision based on previous prediction
-		if prev_trade_type == 'BUY' and curr_price >= prev_target:
-			print("PRICE ROSE ABOVE TARGET OF $%.2f" % prev_target, end=' | ')
+		if prev_trade_type == 'BUY' and curr_price >= price_target:
+			print("PRICE ROSE ABOVE TARGET OF $%.2f" % price_target, end=' | ')
 			next_prediction_time = datetime.datetime.now()
-		elif prev_trade_type == 'SELL' and curr_price < prev_target:
-			print("PRICE FELL BELOW TARGET OF $%.2f" % prev_target, end=' | ')
+		elif prev_trade_type == 'SELL' and curr_price < price_target:
+			print("PRICE FELL BELOW TARGET OF $%.2f" % price_target, end=' | ')
 			next_prediction_time = datetime.datetime.now()
-		elif prev_target:
-			print("PRICE TARGET $%.2f NOT YET MET" % prev_target)
+		elif price_target:
+			print("PRICE TARGET $%.2f NOT YET MET" % price_target)
 
 		quantity = 0
 		if next_prediction_time < datetime.datetime.now():
@@ -134,7 +133,6 @@ def trading_loop(stock_ticker, model, init_cash=300.0):
 			shares += quantity * order_type
 			cash -= quantity * curr_price * order_type
  
-			prev_target = price_target
 			prev_trade_type = order["order_action"]
 
 		# Update the value
