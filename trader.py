@@ -68,10 +68,15 @@ class Trader:
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return stock_predict[0][0]
 
+	def place_order(self, order):
+		self.orders.place_order(order)
+		pass
+
 	def trading_loop(self):
 		price_target = 0.0
 		prev_trade_type = ''
 		next_prediction_time = datetime.datetime.now()
+
 		while (1):
 
 			order = {
@@ -85,8 +90,10 @@ class Trader:
 
 			stock_quote = self.market.quotes(self.stock_ticker)
 			if not stock_quote:
-				# Error with the API - retry
+				# Error with the API - reauthenticate
+				self.etrade_auth()
 				continue
+
 			curr_price = stock_quote['lastTrade']
 
 			if not self.is_trading_hour():
@@ -97,7 +104,12 @@ class Trader:
 				try:
 					time.sleep(AFTER_HOURS_SLEEP)
 				except KeyboardInterrupt:
-					break
+					self.trading_summary(curr_price)
+					if input("Quit trader? (y/n)").lower() == 'y':
+						print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+						break
+					else:
+						print("Continuing to trade...")
 				continue
 
 			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
@@ -131,9 +143,7 @@ class Trader:
 			if quantity > 0 and order["order_action"]:
 				# EXECUTE THE ORDER
 				order["quantity"] = str(quantity)
-				#############################
-				##### DO THE ORDER HERE #####
-				#############################
+				self.place_order(order)
 				print("--> %s %s shares @ $%.2f" % (order["order_action"], quantity, curr_price))
 
 				order_type = 1 if order["order_action"] == "BUY" else -1
@@ -149,7 +159,12 @@ class Trader:
 			try:
 				time.sleep(TRADING_HOURS_SLEEP)
 			except KeyboardInterrupt:
-				break
+				self.trading_summary(curr_price)
+				if input("Quit trader? (y/n)").lower() == 'y':
+					print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+					break
+				else:
+					print("Continuing to trade...")
 
 	def trading_summary(self, curr_stock_price):
 		value = self.cash + curr_stock_price * self.shares
@@ -157,7 +172,7 @@ class Trader:
 		print("STARTING VALUE:  $%.2f" % self.init_cash)
 		print("ENDING VALUE:    $%.2f" % value)
 		print("")
-		r = (value/init_cash - 1) * 100
+		r = (value/self.init_cash - 1) * 100
 		print("TOTAL'S RETURN:  %% %.2f" % r)
 		print("***********************************************************")
 
@@ -174,8 +189,8 @@ if __name__ == '__main__':
 	input_frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
 
 	model = generate_model(input_frame_shape)
-	#train_model(model, train_x, train_y, val_x, val_y)
-	#eval_model(STOCK_TICKER, model, test_x, test_y)
+	train_model(model, train_x, train_y, val_x, val_y)
+	eval_model(STOCK_TICKER, model, test_x, test_y)
 
 	trader = Trader(STOCK_TICKER, model, INIT_CASH)
 	trader.etrade_auth()
@@ -187,8 +202,7 @@ if __name__ == '__main__':
 
 	trader.trading_loop()
 
-	
-	orders = Order(session, accounts.account, base_url)
+	'''
 	order = {
 		"price_type": "MARKET",
 		"order_term": "GOOD_FOR_DAY",
@@ -197,6 +211,7 @@ if __name__ == '__main__':
 		"limit_price":"",
 		"quantity": "1"
 	}
-	#orders.place_order(order)
+	trader.place_order(order)
+	'''
 
 	
