@@ -70,7 +70,7 @@ class Trader:
 		return stock_predict[0][0]
 
 	def place_order(self, order):
-		self.orders.place_order(order)
+		#self.orders.place_order(order)
 		pass
 
 	def trading_loop(self):
@@ -126,7 +126,7 @@ class Trader:
 			quantity = 0
 			if next_prediction_time < datetime.datetime.now():
 				# Make a new prediction for the stock
-				price_target = self.predict_stock(self.stock_ticker, self.model)
+				price_target = self.predict_stock()
 				print("NEW PREDICTION = $%.2f" % price_target)
 				if price_target > curr_price:
 					order["order_action"] = "BUY"
@@ -134,6 +134,7 @@ class Trader:
 				else:
 					order["order_action"] = "SELL"
 					quantity = self.shares
+				prev_trade_type = order["order_action"]
 
 				prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 				next_prediction_time = datetime.datetime.now() + prediction_interval
@@ -147,8 +148,6 @@ class Trader:
 				order_type = 1 if order["order_action"] == "BUY" else -1
 				self.shares += quantity * order_type
 				self.cash -= quantity * curr_price * order_type
-	 
-				prev_trade_type = order["order_action"]
 
 			# Update the value
 			value = self.cash + curr_price * self.shares
