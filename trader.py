@@ -1,3 +1,4 @@
+import argparse
 import datetime, pytz, holidays
 import time
 import sys
@@ -105,11 +106,8 @@ class Trader:
 					time.sleep(AFTER_HOURS_SLEEP)
 				except KeyboardInterrupt:
 					self.trading_summary(curr_price)
-					if input("Quit trader? (y/n)").lower() == 'y':
-						print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+					if self.prompt_quit():
 						break
-					else:
-						print("Continuing to trade...")
 				continue
 
 			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
@@ -160,11 +158,20 @@ class Trader:
 				time.sleep(TRADING_HOURS_SLEEP)
 			except KeyboardInterrupt:
 				self.trading_summary(curr_price)
-				if input("Quit trader? (y/n)").lower() == 'y':
-					print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+				if self.prompt_quit():
 					break
-				else:
-					print("Continuing to trade...")
+
+	def prompt_quit(self):
+		if input("Quit trader? (y/n)   ").lower() == 'y':
+			model_file = input("Save model to file:  ")
+			if model_file:
+				self.model.save(model_file)
+				print("@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@")
+			print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+			return True
+		else:
+			print("Continuing to trade...")
+			return False
 
 	def trading_summary(self, curr_stock_price):
 		value = self.cash + curr_stock_price * self.shares
@@ -173,14 +180,27 @@ class Trader:
 		print("ENDING VALUE:    $%.2f" % value)
 		print("")
 		r = (value/self.init_cash - 1) * 100
-		print("TOTAL'S RETURN:  %% %.2f" % r)
+		print("TOTAL'S RETURN:  %% %.2f" % r, "   🚀🚀🚀" if r > 0 else "")
 		print("***********************************************************")
 
 
 
+def get_args():
+	parser = argparse.ArgumentParser(description='Trade some stonks.')
+	parser.add_argument('--t', dest='ticker',
+						type=str, required=False,
+	                    help='the ticker of the stock to be traded')
+	parser.add_argument('--m', dest='model',
+	                    type=str, required=False,
+	                    help='the path of the file in which the model has been saved')
+	return parser.parse_args()
+
+
 if __name__ == '__main__':
-	if len(sys.argv) > 1 and sys.argv[1].isupper():
-		STOCK_TICKER = sys.argv[1]
+	args = get_args()
+
+	if args.ticker:
+		STOCK_TICKER = args.ticker
 	STOCK_TICKER = STOCK_TICKER.upper()
 
 	stock_raw, stock_dat, stock_labels = model_stock_data(STOCK_TICKER)
@@ -188,9 +208,12 @@ if __name__ == '__main__':
 	train_x, train_y, val_x, val_y = partition_data(TRAINING_SET_THRESH, train_x, train_y)
 	input_frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
 
-	model = generate_model(input_frame_shape)
-	train_model(model, train_x, train_y, val_x, val_y)
-	eval_model(STOCK_TICKER, model, test_x, test_y)
+	if args.model:
+		load_model(args.model)
+	else:
+		model = generate_model(input_frame_shape)
+		train_model(model, train_x, train_y, val_x, val_y)
+		eval_model(STOCK_TICKER, model, test_x, test_y)
 
 	trader = Trader(STOCK_TICKER, model, INIT_CASH)
 	trader.etrade_auth()

@@ -26,6 +26,9 @@ def elliptic_paraboloid_loss(x, y):
     z = ((x_rot**2) / C_DIFF_SIGN) + ((y_rot**2) / C_SAME_SIGN)
     return z
 
+# Load previously saved model
+def load_model(model_path):
+	return tf.keras.models.load_model(model_path)
 
 # Create the model
 def generate_model(input_shape):
