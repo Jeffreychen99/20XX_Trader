@@ -15,6 +15,8 @@ from data_util import *
 
 if CLIENT_TYPE == 'ETRADE':
 	from etrade.client import TradingClient
+elif CLIENT_TYPE == 'ALPACA':
+	from alpaca.client import TradingClient
 
 
 class Trader:
