@@ -59,7 +59,7 @@ class Trader:
 			curr_price = self.client.get_last_price(self.stock_ticker)
 
 			if not self.client.market_is_open():
-				value = self.cash + stock_quote['lastTrade'] * self.shares 
+				value = self.cash + curr_price * self.shares 
 				print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 				print("AFTER HOURS TRADING - NO ACTION")
 				print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (self.shares * curr_price, self.cash, value))
@@ -134,8 +134,8 @@ class Trader:
 			model_file = input("Save model to file:  ")
 			if model_file:
 				self.model.save(model_file)
-				print("@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@")
-			print("@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@")
+				print("@@@@@@@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@@@@@@@")
+			print("@@@@@@@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@@@@@@@")
 			return True
 		else:
 			print("Continuing to trade...\n\n\n")

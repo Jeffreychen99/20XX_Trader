@@ -9,6 +9,8 @@ import requests
 from rauth import OAuth1Service
 from logging.handlers import RotatingFileHandler
 
+from config_20XX import *
+
 # loading configuration file
 config = configparser.ConfigParser()
 config.read('etrade/config.ini')
@@ -27,8 +29,8 @@ def oauth():
     """Allows user authorization for the sample application with OAuth 1"""
     etrade = OAuth1Service(
         name="etrade",
-        consumer_key=config["DEFAULT"]["CONSUMER_KEY"],
-        consumer_secret=config["DEFAULT"]["CONSUMER_SECRET"],
+        consumer_key=config[MODE]["CONSUMER_KEY"],
+        consumer_secret=config[MODE]["CONSUMER_SECRET"],
         request_token_url="https://api.etrade.com/oauth/request_token",
         access_token_url="https://api.etrade.com/oauth/access_token",
         authorize_url="https://us.etrade.com/e/t/etws/authorize?key={}&token={}",
@@ -44,10 +46,10 @@ def oauth():
             print(entry + ")\t" + menu_items[entry])
         selection = input("Please select Consumer Key Type: ")
         if selection == "1":
-            base_url = config["DEFAULT"]["SANDBOX_BASE_URL"]
+            base_url = config[MODE]["SANDBOX_BASE_URL"]
             break
         elif selection == "2":
-            base_url = config["DEFAULT"]["PROD_BASE_URL"]
+            base_url = config[MODE]["PROD_BASE_URL"]
             break
         elif selection == "3":
             break

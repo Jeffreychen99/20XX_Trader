@@ -2,11 +2,13 @@ import os
 import configparser
 import alpaca_trade_api as tradeapi
 
+from config_20XX import MODE
+
 # loading configuration file
 config = configparser.ConfigParser()
 config.read('alpaca/config.ini')
-for k in config["DEFAULT"]:
-    os.environ[k.upper()] = config["DEFAULT"][k]
+for k in config[MODE]:
+    os.environ[k.upper()] = config[MODE][k]
 
 class TradingClient:
 
