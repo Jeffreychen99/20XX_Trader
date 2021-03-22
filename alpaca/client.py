@@ -15,7 +15,6 @@ class TradingClient:
     def __init__(self):
         self.api = tradeapi.REST()
         self.account = self.api.get_account()
-        self.clock = self.api.get_clock()
 
     def get_quote(self, symbol):
         barset = self.api.get_barset(symbol.upper(), 'minute', limit=1)
@@ -35,4 +34,4 @@ class TradingClient:
         )
 
     def market_is_open(self):
-        return self.clock.is_open
+        return self.api.get_clock().is_open
