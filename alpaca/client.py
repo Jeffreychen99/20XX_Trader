@@ -20,7 +20,8 @@ class TradingClient:
         return self.api.get_last_quote(symbol.upper())
 
     def get_last_price(self, symbol):
-        return self.api.get_last_trade(symbol).price
+        return self.get_quote(symbol).askprice
+        #return self.api.get_last_trade(symbol).price
 
     def place_order(self, order):
         return self.api.submit_order(
@@ -45,3 +46,7 @@ class TradingClient:
 
     def market_is_open(self):
         return self.api.get_clock().is_open
+
+
+client = TradingClient()
+print(client.get_quote('AMC'))
