@@ -20,7 +20,6 @@ class TradingClient:
         return self.api.get_last_quote(symbol.upper())
 
     def get_last_price(self, symbol):
-        #return self.get_quote(symbol).bidprice
         return self.api.get_last_trade(symbol).price
 
     def place_order(self, order):
@@ -33,14 +32,13 @@ class TradingClient:
             time_in_force='gtc'
         )
 
-    def list_positions(self):
-        return self.api.list_positions()
+    def get_average_fill_price(self, order_id):
+        order = self.get_order(order_id)
+        p = order.filled_avg_price if order.filled_avg_price else 0.0
+        return  int(order.filled_qty), int(order.qty), float(p)
 
     def get_order(self, order_id):
         return self.api.get_order(order_id)
-
-    def list_open_orders(self):
-        return self.api.list_orders(status='open')
 
     def cancel_order(self, order_id):
         return self.api.cancel_order(order_id)

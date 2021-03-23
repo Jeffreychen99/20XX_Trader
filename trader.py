@@ -26,7 +26,6 @@ class Trader:
 		self.model = model
 		self.client = client
 
-		self.total_trades = 0
 		self.init_cash = init_cash
 		self.cash = init_cash
 		self.shares = 0
@@ -42,10 +41,11 @@ class Trader:
 		tz = pytz.timezone('US/Eastern')
 
 		price_target = 0.0
-		prev_trade_type = ''
-		prev_order_id = ''
+		prev_order_action = 'BUY'
+		prev_order_id = '94226614-4ee2-4ac8-859c-7bc427b13872'
 		next_prediction_time = datetime.datetime.now()
 		prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
+
 		while (1):
 
 			order = {
@@ -66,6 +66,7 @@ class Trader:
 				print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (self.shares * curr_price, self.cash, value))
 				try:
 					time.sleep(AFTER_HOURS_SLEEP)
+					pass
 				except KeyboardInterrupt:
 					self.trading_summary(curr_price)
 					if self.prompt_quit():
@@ -75,11 +76,29 @@ class Trader:
 			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			print("CURRENT = $%.2f" % curr_price)
 
+			# Check if previous order was filled
+			prev_order_filled = True
+			if prev_order_id:
+				filled_qty, qty, filled_avg_price = self.client.get_average_fill_price(prev_order_id)
+				prev_order_filled = filled_qty == qty
+
+				s = (prev_order_action, filled_qty, qty, filled_avg_price)
+				if prev_order_filled:
+					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+					prev_order_id = ''
+				else:
+					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+
+				if filled_avg_price != 0.0:
+					order_type = 1 if prev_order_action == "BUY" else -1
+					self.shares += filled_qty * order_type
+					self.cash -= filled_qty * filled_avg_price * order_type
+
 			# Make decision based on previous prediction
-			if prev_trade_type == 'BUY' and curr_price >= price_target:
+			if prev_order_action == 'BUY' and curr_price >= price_target:
 				print("PRICE ROSE ABOVE TARGET OF $%.2f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
-			elif prev_trade_type == 'SELL' and curr_price < price_target:
+			elif prev_order_action == 'SELL' and curr_price < price_target:
 				print("PRICE FELL BELOW TARGET OF $%.2f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif price_target:
@@ -87,6 +106,9 @@ class Trader:
 
 			quantity = 0
 			if next_prediction_time < datetime.datetime.now():
+				# Cancel previous order if not filled
+				if not prev_order_filled:
+					self.client.cancel_order(prev_order_id)
 				# Make a new prediction for the stock
 				price_target = self.predict_stock()
 				print("NEW PREDICTION = $%.2f" % price_target)
@@ -97,7 +119,7 @@ class Trader:
 				else:
 					order["order_action"] = "SELL"
 					quantity = self.shares
-				prev_trade_type = order["order_action"]
+				prev_order_action = order["order_action"]
 				next_prediction_time = datetime.datetime.now() + prediction_interval
 
 			if quantity > 0 and order["order_action"]:
@@ -112,11 +134,7 @@ class Trader:
 					next_prediction_time = datetime.datetime.now()
 					continue
 
-				print("--> %s %s shares @ $%.2f" % (order["order_action"], quantity, curr_price))
-
-				order_type = 1 if order["order_action"] == "BUY" else -1
-				self.shares += quantity * order_type
-				self.cash -= quantity * curr_price * order_type
+				print("--> ORDER PLACED: %s %s shares @ $%.2f" % (order["order_action"], quantity, curr_price))
 
 			# Update the value
 			value = self.cash + curr_price * self.shares
@@ -157,10 +175,10 @@ def get_args():
 	parser = argparse.ArgumentParser(description='Trade some stonks.')
 	parser.add_argument('--t', dest='ticker',
 						type=str, required=False,
-	                    help='the ticker of the stock to be traded')
+						help='the ticker of the stock to be traded')
 	parser.add_argument('--m', dest='model',
-	                    type=str, required=False,
-	                    help='the path of the file in which the model has been saved')
+						type=str, required=False,
+						help='the path of the file in which the model has been saved')
 	return parser.parse_args()
 
 
