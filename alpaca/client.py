@@ -17,21 +17,33 @@ class TradingClient:
         self.account = self.api.get_account()
 
     def get_quote(self, symbol):
-        barset = self.api.get_barset(symbol.upper(), 'minute', limit=1)
-        return barset
+        return self.api.get_last_quote(symbol.upper())
 
     def get_last_price(self, symbol):
-        barset = self.api.get_barset(symbol.upper(), 'minute', limit=1)
-        return barset[symbol][0].c
+        #return self.get_quote(symbol).bidprice
+        return self.api.get_last_trade(symbol).price
 
     def place_order(self, order):
-        self.api.submit_order(
+        return self.api.submit_order(
             symbol=order['symbol'].upper(),
             qty=int(order['quantity']),
             side=order['order_action'].lower(),
             type=order['price_type'].lower(),
+            limit_price=float(order['limit_price']) if order['price_type'].lower() == 'limit' else None,
             time_in_force='gtc'
         )
+
+    def list_positions(self):
+        return self.api.list_positions()
+
+    def get_order(self, order_id):
+        return self.api.get_order(order_id)
+
+    def list_open_orders(self):
+        return self.api.list_orders(status='open')
+
+    def cancel_order(self, order_id):
+        return self.api.cancel_order(order_id)
 
     def market_is_open(self):
         return self.api.get_clock().is_open

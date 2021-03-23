@@ -43,17 +43,18 @@ class Trader:
 
 		price_target = 0.0
 		prev_trade_type = ''
+		prev_order_id = ''
 		next_prediction_time = datetime.datetime.now()
 		prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 		while (1):
 
 			order = {
-				"price_type": "MARKET",
+				"price_type": "LIMIT",
 				"order_term": "GOOD_FOR_DAY",
 				"symbol": self.stock_ticker,
 				"order_action": "",
-				"limit_price":"",
-				"quantity": "0"
+				"limit_price": 0.0,
+				"quantity": 0
 			}
 
 			curr_price = self.client.get_last_price(self.stock_ticker)
@@ -89,6 +90,7 @@ class Trader:
 				# Make a new prediction for the stock
 				price_target = self.predict_stock()
 				print("NEW PREDICTION = $%.2f" % price_target)
+				order['limit_price'] = curr_price
 				if price_target > curr_price:
 					order["order_action"] = "BUY"
 					quantity = int(self.cash // curr_price)
@@ -96,15 +98,13 @@ class Trader:
 					order["order_action"] = "SELL"
 					quantity = self.shares
 				prev_trade_type = order["order_action"]
-
 				next_prediction_time = datetime.datetime.now() + prediction_interval
 
 			if quantity > 0 and order["order_action"]:
-				# EXECUTE THE ORDER
-				order["quantity"] = str(quantity)
-
 				try:
-					self.client.place_order(order)
+					# EXECUTE THE ORDER
+					order["quantity"] = quantity
+					prev_order_id = self.client.place_order(order).id
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
