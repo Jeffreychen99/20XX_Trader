@@ -41,15 +41,15 @@ class Trader:
 		tz = pytz.timezone('US/Eastern')
 
 		price_target = 0.0
-		prev_order_action = 'BUY'
-		prev_order_id = '94226614-4ee2-4ac8-859c-7bc427b13872'
+		prev_order_action = ''
+		prev_order_id = ''
 		next_prediction_time = datetime.datetime.now()
 		prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 
 		while (1):
 
 			order = {
-				"price_type": "LIMIT",
+				"price_type": "MARKET",
 				"order_term": "GOOD_FOR_DAY",
 				"symbol": self.stock_ticker,
 				"order_action": "",
@@ -59,11 +59,11 @@ class Trader:
 
 			curr_price = self.client.get_last_price(self.stock_ticker)
 
+			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			if not self.client.market_is_open():
-				value = self.cash + curr_price * self.shares 
-				print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 				print("AFTER HOURS TRADING - NO ACTION")
-				print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f\n"  % (self.shares * curr_price, self.cash, value))
+				self.print_value(curr_price)
+
 				try:
 					time.sleep(AFTER_HOURS_SLEEP)
 					pass
@@ -73,8 +73,7 @@ class Trader:
 						break
 				continue
 
-			print("---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
-			print("CURRENT = $%.2f" % curr_price)
+			print("CURRENT = $%.3f" % curr_price)
 
 			# Check if previous order was filled
 			prev_order_filled = True
@@ -84,10 +83,10 @@ class Trader:
 
 				s = (prev_order_action, filled_qty, qty, filled_avg_price)
 				if prev_order_filled:
-					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.3f" % s)
 					prev_order_id = ''
 				else:
-					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.3f" % s)
 
 				if filled_avg_price != 0.0:
 					order_type = 1 if prev_order_action == "BUY" else -1
@@ -96,13 +95,13 @@ class Trader:
 
 			# Make decision based on previous prediction
 			if prev_order_action == 'BUY' and curr_price >= price_target:
-				print("PRICE ROSE ABOVE TARGET OF $%.2f" % price_target, end=' | ')
+				print("PRICE ROSE ABOVE TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif prev_order_action == 'SELL' and curr_price < price_target:
-				print("PRICE FELL BELOW TARGET OF $%.2f" % price_target, end=' | ')
+				print("PRICE FELL BELOW TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif price_target:
-				print("PRICE TARGET $%.2f NOT YET MET" % price_target)
+				print("PRICE TARGET $%.3f NOT YET MET" % price_target)
 
 			quantity = 0
 			if next_prediction_time < datetime.datetime.now():
@@ -111,7 +110,7 @@ class Trader:
 					self.client.cancel_order(prev_order_id)
 				# Make a new prediction for the stock
 				price_target = self.predict_stock()
-				print("NEW PREDICTION = $%.2f" % price_target)
+				print("NEW PREDICTION = $%.3f" % price_target)
 				order['limit_price'] = curr_price
 				if price_target > curr_price:
 					order["order_action"] = "BUY"
@@ -134,11 +133,9 @@ class Trader:
 					next_prediction_time = datetime.datetime.now()
 					continue
 
-				print("--> ORDER PLACED: %s %s shares @ $%.2f" % (order["order_action"], quantity, curr_price))
+				print("--> ORDER PLACED: %s %s shares @ $%.3f" % (order["order_action"], quantity, curr_price))
 
-			# Update the value
-			value = self.cash + curr_price * self.shares
-			print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % (self.shares * curr_price, self.cash, value))
+			self.print_value(curr_price)
 
 			try:
 				time.sleep(TRADING_HOURS_SLEEP)
@@ -146,6 +143,12 @@ class Trader:
 				self.trading_summary(curr_price)
 				if self.prompt_quit():
 					break
+
+
+	def print_value(self, curr_price):
+		value = self.cash + curr_price * self.shares 
+		print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % (self.shares * curr_price, self.cash, value))
+		return value
 
 	def prompt_quit(self):
 		if input("Quit trader? (y/n)   ").lower() == 'y':
