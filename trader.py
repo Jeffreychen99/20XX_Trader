@@ -19,6 +19,21 @@ elif CLIENT_TYPE == 'ALPACA':
 	from alpaca.client import TradingClient
 
 
+class Logger(object):
+	def __init__(self):
+		self.terminal = sys.stdout
+
+	def write(self, message):
+		log_datetime = datetime.datetime.now(tz).strftime("%m-%d-%Y")
+		with open ("logs/trader_%s.log" % log_datetime, 'a') as self.log:            
+			self.log.write(message)
+		self.terminal.write(message)
+
+	def flush(self):
+		pass
+
+
+
 class Trader:
 
 	def __init__(self, stock_ticker, model, client, init_cash=1000.00):
@@ -38,8 +53,6 @@ class Trader:
 		return stock_predict[0][0]
 
 	def trading_loop(self):
-		tz = pytz.timezone('US/Eastern')
-
 		price_target = 0.0
 		prev_order_action = ''
 		prev_order_id = ''
@@ -212,6 +225,9 @@ if __name__ == '__main__':
 	if ask_continue != 'y':
 		exit(0)
 
+	tz = pytz.timezone('US/Eastern')
+	sys.stdout = Logger()
+
 	trader.trading_loop()
 
-	
+	logfile.close()

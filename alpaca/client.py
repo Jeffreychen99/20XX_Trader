@@ -46,7 +46,3 @@ class TradingClient:
 
     def market_is_open(self):
         return self.api.get_clock().is_open
-
-
-client = TradingClient()
-print(client.get_quote('AMC'))
