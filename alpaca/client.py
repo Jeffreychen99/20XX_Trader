@@ -20,8 +20,13 @@ class TradingClient:
         return self.api.get_last_quote(symbol.upper())
 
     def get_last_price(self, symbol):
+        return self.api.get_last_trade(symbol).price
+
+    def get_last_ask(self, symbol):
         return self.get_quote(symbol).askprice
-        #return self.api.get_last_trade(symbol).price
+
+    def get_last_Bid(self, symbol):
+        return self.get_quote(symbol).bidprice
 
     def place_order(self, order):
         return self.api.submit_order(
