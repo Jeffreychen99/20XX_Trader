@@ -166,11 +166,12 @@ class Trader:
 		return value
 
 	def prompt_quit(self):
-		if input("Quit trader? (y/n)   ").lower() == 'y':
-			model_file = input("Save model to file:  ")
-			if model_file:
-				self.model.save(model_file)
-				print("@@@@@@@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@@@@@@@")
+		print("Quit trader? (y/n)   ")
+		if input("").lower() == 'y':
+			#model_file = input("Save model to file:  ")
+			#if model_file:
+			#	self.model.save(model_file)
+			#	print("@@@@@@@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@@@@@@@")
 			print("@@@@@@@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@@@@@@@")
 			return True
 		else:
@@ -231,5 +232,3 @@ if __name__ == '__main__':
 	sys.stdout = Logger()
 
 	trader.trading_loop()
-
-	logfile.close()
