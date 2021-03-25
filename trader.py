@@ -71,6 +71,8 @@ class Trader:
 			}
 
 			curr_price = self.client.get_last_price(self.stock_ticker)
+			curr_bid_price = self.client.get_last_bid(self.stock_ticker)
+			curr_ask_price = self.client.get_last_ask(self.stock_ticker)
 
 			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			if not self.client.market_is_open():
@@ -107,10 +109,10 @@ class Trader:
 					self.cash -= filled_qty * filled_avg_price * order_type
 
 			# Make decision based on previous prediction
-			if prev_order_action == 'BUY' and curr_price >= price_target:
+			if prev_order_action == 'BUY' and curr_ask_price >= price_target:
 				print("PRICE ROSE ABOVE TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
-			elif prev_order_action == 'SELL' and curr_price < price_target:
+			elif prev_order_action == 'SELL' and curr_bid_price <= price_target:
 				print("PRICE FELL BELOW TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif price_target:
@@ -125,10 +127,10 @@ class Trader:
 				price_target = self.predict_stock()
 				print("NEW PREDICTION = $%.3f" % price_target)
 				order['limit_price'] = curr_price
-				if price_target > curr_price:
+				if price_target > curr_ask_price:
 					order["order_action"] = "BUY"
 					quantity = int(self.cash // curr_price)
-				else:
+				elif price_target < curr_bid_price:
 					order["order_action"] = "SELL"
 					quantity = self.shares
 				prev_order_action = order["order_action"]
