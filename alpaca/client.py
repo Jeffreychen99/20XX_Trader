@@ -25,7 +25,7 @@ class TradingClient:
     def get_last_ask(self, symbol):
         return self.get_quote(symbol).askprice
 
-    def get_last_Bid(self, symbol):
+    def get_last_bid(self, symbol):
         return self.get_quote(symbol).bidprice
 
     def place_order(self, order):
