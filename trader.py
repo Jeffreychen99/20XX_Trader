@@ -54,7 +54,6 @@ class Trader:
 
 	def trading_loop(self):
 		price_target = 0.0
-		prev_order_action = ''
 		prev_order_id = ''
 		next_prediction_time = datetime.datetime.now()
 		prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
@@ -96,6 +95,7 @@ class Trader:
 				filled_qty, qty, filled_avg_price = self.client.get_average_fill_price(prev_order_id)
 				prev_order_filled = filled_qty == qty
 
+				prev_order_action = 'BUY' if self.shares > 0 else 'SELL'
 				s = (prev_order_action, filled_qty, qty, filled_avg_price)
 				if prev_order_filled:
 					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.3f" % s)
@@ -104,16 +104,16 @@ class Trader:
 					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.3f" % s)
 
 				if filled_avg_price != 0.0:
-					order_type = 1 if prev_order_action == "BUY" else -1
+					order_type = 1 if self.shares > 0 else -1
 					self.shares += filled_qty * order_type
 					self.cash -= filled_qty * filled_avg_price * order_type
 
 			# Make decision based on previous prediction
-			if prev_order_action == 'BUY' and curr_ask_price >= price_target:
-				print("PRICE ROSE ABOVE TARGET OF $%.3f" % price_target, end=' | ')
-				next_prediction_time = datetime.datetime.now()
-			elif prev_order_action == 'SELL' and curr_bid_price <= price_target:
+			if (self.shares == 0 or self.cash >= curr_ask_price) and curr_bid_price <= price_target:
 				print("PRICE FELL BELOW TARGET OF $%.3f" % price_target, end=' | ')
+				next_prediction_time = datetime.datetime.now()
+			elif self.shares > 0 and curr_ask_price >= price_target:
+				print("PRICE ROSE ABOVE TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif price_target:
 				print("PRICE TARGET $%.3f NOT YET MET" % price_target)
@@ -133,7 +133,6 @@ class Trader:
 				elif price_target < curr_bid_price:
 					order["order_action"] = "SELL"
 					quantity = self.shares
-				prev_order_action = order["order_action"]
 				next_prediction_time = datetime.datetime.now() + prediction_interval
 
 			if quantity > 0 and order["order_action"]:
