@@ -38,10 +38,16 @@ class TradingClient:
             time_in_force='gtc'
         )
 
-    def get_average_fill_price(self, order_id):
+    def get_order_info(self, order_id):
         order = self.get_order(order_id)
-        p = order.filled_avg_price if order.filled_avg_price else 0.0
-        return  int(order.filled_qty), int(order.qty), float(p)
+        p = float(order.filled_avg_price) if order.filled_avg_price else 0.0
+        info = {
+            'filled_qty': int(order.filled_qty),
+            'qty': int(order.qty),
+            'avg_price': p,
+            'order_action': order.side.upper()
+        }
+        return  info
 
     def get_order(self, order_id):
         return self.api.get_order(order_id)
