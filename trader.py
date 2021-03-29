@@ -87,7 +87,7 @@ class Trader:
 						break
 				continue
 
-			print("LAST TRADE = $%.3f | BID = $%.3f | ASK = $%.3f" % (curr_price, curr_bid_price, curr_ask_price))
+			print("LAST TRADE = $%.2f | BID = $%.2f | ASK = $%.2f" % (curr_price, curr_bid_price, curr_ask_price))
 
 			# Check if previous order was filled
 			prev_order_filled = True
@@ -97,10 +97,10 @@ class Trader:
 
 				s = (order_info['order_action'], order_info['filled_qty'], order_info['qty'], order_info['avg_price'])
 				if prev_order_filled:
-					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.3f" % s)
+					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 					prev_order_id = ''
 				else:
-					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.3f" % s)
+					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
 				if order_info['avg_price'] != 0.0:
 					order_type = 1 if order_info['order_action'] == 'BUY' else -1
@@ -108,13 +108,13 @@ class Trader:
 					self.cash -= order_info['filled_qty'] * order_info['avg_price'] * order_type
 
 			# Make decision based on previous prediction
-			if (self.shares == 0 or self.cash >= curr_ask_price) and curr_bid_price <= price_target:
+			if (self.shares == 0 or self.cash >= curr_ask_price) and curr_ask_price <= price_target:
 				# See if it's a good time to buy
-				print("PRICE FELL BELOW TARGET OF $%.3f" % price_target, end=' | ')
+				print("PRICE IS BELOW TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
-			elif self.shares > 0 and curr_ask_price >= price_target:
+			elif self.shares > 0 and curr_bid_price >= price_target:
 				# See if it's a good time to sell
-				print("PRICE ROSE ABOVE TARGET OF $%.3f" % price_target, end=' | ')
+				print("PRICE IS ABOVE TARGET OF $%.3f" % price_target, end=' | ')
 				next_prediction_time = datetime.datetime.now()
 			elif price_target:
 				print("PRICE TARGET $%.3f NOT YET MET" % price_target)
@@ -147,8 +147,16 @@ class Trader:
 						break
 					next_prediction_time = datetime.datetime.now()
 					continue
-
-				print("--> ORDER PLACED: %s %s shares @ $%.3f" % (order["order_action"], quantity, curr_price))
+				print("--> ORDER PLACED: %s %s shares" % (order["order_action"], quantity), end='')
+				if order["order_action"] == "MARKET":
+					print("@ market price")
+				else:
+					print("@ $%.2f" % order["limit_price"])
+			else:
+				if price_target <= curr_ask_price:
+					print("NO ACTION:  PRICE TARGET ≤ ASK")
+				elif price_target >= curr_bid_price:
+					print("NO ACTION:  PRICE TARGET ≥ BID")
 
 			self.print_value(curr_price)
 
