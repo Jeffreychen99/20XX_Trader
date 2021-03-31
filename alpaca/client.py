@@ -1,4 +1,6 @@
 import os
+import asyncio
+import threading
 import configparser
 import alpaca_trade_api as tradeapi
 
@@ -12,21 +14,57 @@ for k in config[MODE]:
 
 class TradingClient:
 
-    def __init__(self):
+    def __init__(self, symbol):
+        self.symbol = symbol.upper()
         self.api = tradeapi.REST()
         self.account = self.api.get_account()
 
-    def get_quote(self, symbol):
-        return self.api.get_last_quote(symbol.upper())
+        self.curr_price = self.api.get_last_trade(self.symbol).price
+        quote = self.get_quote()
+        self.ask_price = quote.askprice
+        self.bid_price = quote.bidprice
 
-    def get_last_price(self, symbol):
-        return self.api.get_last_trade(symbol).price
+        self.stream = tradeapi.Stream(config[MODE]['APCA_API_KEY_ID'],
+                config[MODE]['APCA_API_SECRET_KEY'],
+                base_url=config[MODE]['APCA_API_BASE_URL'],
+                data_feed='iex')
 
-    def get_last_ask(self, symbol):
-        return self.get_quote(symbol).askprice
+        async def trade_callback(trade):
+            self.curr_price = trade.price
 
-    def get_last_bid(self, symbol):
-        return self.get_quote(symbol).bidprice
+        async def quote_callback(quote):
+            self.bid_price = quote.bidprice
+            self.ask_price = quote.askprice
+
+        self.stream.subscribe_trades(trade_callback, self.symbol)
+        self.stream.subscribe_quotes(quote_callback, self.symbol)
+
+        self.stream_event_loop = asyncio.new_event_loop()
+        def start_stream():
+            asyncio.set_event_loop(self.stream_event_loop)
+            try:
+                self.stream.run()
+            except:
+                pass
+
+        streamThread = threading.Thread(target=start_stream)
+        streamThread.start()
+
+    def halt(self):
+        print("Shutting down alpaca client stream...")
+        self.stream_event_loop.stop()
+
+    def get_quote(self):
+        return self.api.get_last_quote(self.symbol)
+
+    def get_last_price(self):
+        return self.curr_price
+
+    def get_last_ask(self):
+        return self.ask_price
+
+    def get_last_bid(self):
+        return self.bid_price
 
     def place_order(self, order):
         return self.api.submit_order(

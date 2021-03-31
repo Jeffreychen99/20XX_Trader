@@ -69,9 +69,9 @@ class Trader:
 				"quantity": 0
 			}
 
-			curr_price = self.client.get_last_price(self.stock_ticker)
-			curr_bid_price = self.client.get_last_bid(self.stock_ticker)
-			curr_ask_price = self.client.get_last_ask(self.stock_ticker)
+			curr_price = self.client.get_last_price()
+			curr_bid_price = self.client.get_last_bid()
+			curr_ask_price = self.client.get_last_ask()
 
 			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			if not self.client.market_is_open():
@@ -147,7 +147,7 @@ class Trader:
 						break
 					next_prediction_time = datetime.datetime.now()
 					continue
-				print("--> ORDER PLACED: %s %s shares" % (order["order_action"], quantity), end='')
+				print("--> ORDER PLACED: %s %s shares " % (order["order_action"], quantity), end='')
 				if order["order_action"] == "MARKET":
 					print("@ market price")
 				else:
@@ -176,10 +176,7 @@ class Trader:
 	def prompt_quit(self):
 		print("Quit trader? (y/n)   ")
 		if input("").lower() == 'y':
-			#model_file = input("Save model to file:  ")
-			#if model_file:
-			#	self.model.save(model_file)
-			#	print("@@@@@@@@@@@@@@@@@@@@@@  MODEL SAVED  @@@@@@@@@@@@@@@@@@@@@@")
+			self.client.halt()
 			print("@@@@@@@@@@@@@@@@@@@@@@ TRADER HALTED @@@@@@@@@@@@@@@@@@@@@@")
 			return True
 		else:
@@ -228,11 +225,10 @@ if __name__ == '__main__':
 		train_model(model, train_x, train_y, val_x, val_y)
 		eval_model(STOCK_TICKER, model, test_x, test_y)
 
-	trading_client = TradingClient()
+	trading_client = TradingClient(STOCK_TICKER)
 	trader = Trader(STOCK_TICKER, model, trading_client, INIT_CASH)
 
 	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (y/n): ").lower()
-	ask_continue = 'y'
 	if ask_continue != 'y':
 		exit(0)
 
