@@ -47,6 +47,7 @@ class Trader:
 
 		self.price_target = 0.0
 		self.prev_order_id = ''
+		self.prev_filled_shares = 0
 		self.next_prediction_time = datetime.datetime.now()
 		self.prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 
@@ -107,10 +108,16 @@ class Trader:
 			print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
 		if order_info['avg_price'] != 0.0:
+			new_filled_shares = order_info['filled_qty'] - self.prev_filled_shares
 			order_type = 1 if order_info['order_action'] == 'BUY' else -1
-			self.shares += order_info['filled_qty'] * order_type
-			self.cash -= order_info['filled_qty'] * order_info['avg_price'] * order_type
+			self.shares += new_filled_shares * order_type
+			self.cash -= new_filled_shares * order_info['avg_price'] * order_type
+
+			self.prev_filled_shares = order_info['filled_qty']
 		return prev_order_filled
+
+	def validate_trader(self):
+		pass
 
 	def trading_loop(self):
 
@@ -153,6 +160,7 @@ class Trader:
 				try:
 					# EXECUTE THE ORDER
 					self.prev_order_id = self.client.place_order(order).id
+					self.prev_filed_shares = 0
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
@@ -181,8 +189,10 @@ class Trader:
 
 
 	def print_value(self, curr_price):
-		value = self.cash + curr_price * self.shares 
-		print("SHARES = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % (self.shares * curr_price, self.cash, value))
+		equity = self.shares * curr_price
+		value = self.cash + equity
+		t = (self.shares, equity, self.cash, value)
+		print("SHARES = %d, EQUITY = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % t)
 		return value
 
 	def prompt_quit(self):
