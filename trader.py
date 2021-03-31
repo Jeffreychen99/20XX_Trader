@@ -116,9 +116,6 @@ class Trader:
 			self.prev_filled_shares = order_info['filled_qty']
 		return prev_order_filled
 
-	def validate_trader(self):
-		pass
-
 	def trading_loop(self):
 
 		while (1):
@@ -143,6 +140,12 @@ class Trader:
 				continue
 
 			print("LAST TRADE = $%.2f | BID = $%.2f | ASK = $%.2f" % (curr_price, curr_bid_price, curr_ask_price))
+
+			try:
+				self.validate_trader(curr_bid_price, curr_ask_price)
+			except:
+				if self.prompt_quit():
+					break
 
 			# Check if previous order was filled
 			prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
@@ -187,13 +190,19 @@ class Trader:
 				if self.prompt_quit():
 					break
 
-
 	def print_value(self, curr_price):
 		equity = self.shares * curr_price
 		value = self.cash + equity
 		t = (self.shares, equity, self.cash, value)
 		print("SHARES = %d, EQUITY = $%.2f, CASH = $%.2f, VALUE = $%.2f"  % t)
 		return value
+
+	def validate_trader(self, curr_bid_price, curr_ask_price):
+		assert self.shares >= 0
+		assert self.cash >= 0
+
+		assert curr_bid_price > 0
+		assert curr_ask_price > 0
 
 	def prompt_quit(self):
 		print("Quit trader? (y/n)   ")
