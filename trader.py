@@ -45,35 +45,83 @@ class Trader:
 		self.cash = init_cash
 		self.shares = 0
 
-	def predict_stock(self):
+		self.price_target = 0.0
+		self.prev_order_id = ''
+		self.next_prediction_time = datetime.datetime.now()
+		self.prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
+
+	def get_stock_prediction(self):
 		# Pull the most recent stock data 
 		stock_raw, stock_dat = recent_stock_data(self.stock_ticker)
 		stock_predict = self.model.predict(stock_dat)
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return stock_predict[0][0]
 
+	def new_order(self):
+		order = {
+			"price_type": "MARKET",
+			"order_term": "GOOD_FOR_DAY",
+			"symbol": self.stock_ticker,
+			"order_action": "",
+			"limit_price": 0.0,
+			"quantity": 0
+		}
+		return order
+
+	def update_prediction_time(self, curr_bid_price, curr_ask_price):
+		# Make decision based on previous prediction
+		if (self.shares == 0 or self.cash >= curr_ask_price) and curr_ask_price <= self.price_target:
+			# See if it's a good time to buy
+			print("PRICE IS BELOW TARGET OF $%.3f" % self.price_target, end=' | ')
+			self.next_prediction_time = datetime.datetime.now()
+		elif self.shares > 0 and curr_bid_price >= self.price_target:
+			# See if it's a good time to sell
+			print("PRICE IS ABOVE TARGET OF $%.3f" % self.price_target, end=' | ')
+			self.next_prediction_time = datetime.datetime.now()
+		elif self.price_target:
+			print("PRICE TARGET $%.3f NOT YET MET" % self.price_target)
+
+	def update_stock_prediction(self, order, curr_bid_price, curr_ask_price):
+		# Make a new prediction for the stock
+		self.price_target = self.get_stock_prediction()
+		print("NEW PREDICTION = $%.3f" % self.price_target)
+		order['limit_price'] = self.price_target
+		if self.price_target > curr_ask_price:
+			order["order_action"] = "BUY"
+			order["quantity"] = int(self.cash // curr_price)
+		elif self.price_target < curr_bid_price:
+			order["order_action"] = "SELL"
+			order["quantity"] = self.shares
+		self.next_prediction_time = datetime.datetime.now() + self.prediction_interval
+		return order
+
+	def check_previous_order_filled(self):
+		order_info = self.client.get_order_info(self.prev_order_id)
+		prev_order_filled = order_info['filled_qty'] == order_info['qty']
+
+		s = (order_info['order_action'], order_info['filled_qty'], order_info['qty'], order_info['avg_price'])
+		if prev_order_filled:
+			print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+			self.prev_order_id = ''
+		else:
+			print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+
+		if order_info['avg_price'] != 0.0:
+			order_type = 1 if order_info['order_action'] == 'BUY' else -1
+			self.shares += order_info['filled_qty'] * order_type
+			self.cash -= order_info['filled_qty'] * order_info['avg_price'] * order_type
+		return prev_order_filled
+
 	def trading_loop(self):
-		price_target = 0.0
-		prev_order_id = ''
-		next_prediction_time = datetime.datetime.now()
-		prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 
 		while (1):
 
-			order = {
-				"price_type": "MARKET",
-				"order_term": "GOOD_FOR_DAY",
-				"symbol": self.stock_ticker,
-				"order_action": "",
-				"limit_price": 0.0,
-				"quantity": 0
-			}
-
+			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
+			order = self.new_order()
 			curr_price = self.client.get_last_price()
 			curr_bid_price = self.client.get_last_bid()
 			curr_ask_price = self.client.get_last_ask()
 
-			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			if not self.client.market_is_open():
 				print("AFTER HOURS TRADING - NO ACTION")
 				self.print_value(curr_price)
@@ -90,72 +138,36 @@ class Trader:
 			print("LAST TRADE = $%.2f | BID = $%.2f | ASK = $%.2f" % (curr_price, curr_bid_price, curr_ask_price))
 
 			# Check if previous order was filled
-			prev_order_filled = True
-			if prev_order_id:
-				order_info = self.client.get_order_info(prev_order_id)
-				prev_order_filled = order_info['filled_qty'] == order_info['qty']
-
-				s = (order_info['order_action'], order_info['filled_qty'], order_info['qty'], order_info['avg_price'])
-				if prev_order_filled:
-					print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-					prev_order_id = ''
-				else:
-					print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-
-				if order_info['avg_price'] != 0.0:
-					order_type = 1 if order_info['order_action'] == 'BUY' else -1
-					self.shares += order_info['filled_qty'] * order_type
-					self.cash -= order_info['filled_qty'] * order_info['avg_price'] * order_type
+			prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
 
 			# Make decision based on previous prediction
-			if (self.shares == 0 or self.cash >= curr_ask_price) and curr_ask_price <= price_target:
-				# See if it's a good time to buy
-				print("PRICE IS BELOW TARGET OF $%.3f" % price_target, end=' | ')
-				next_prediction_time = datetime.datetime.now()
-			elif self.shares > 0 and curr_bid_price >= price_target:
-				# See if it's a good time to sell
-				print("PRICE IS ABOVE TARGET OF $%.3f" % price_target, end=' | ')
-				next_prediction_time = datetime.datetime.now()
-			elif price_target:
-				print("PRICE TARGET $%.3f NOT YET MET" % price_target)
+			self.update_prediction_time(curr_bid_price, curr_ask_price)
 
-			quantity = 0
-			if next_prediction_time < datetime.datetime.now():
+			if self.next_prediction_time < datetime.datetime.now():
 				# Cancel previous order if not filled
 				if not prev_order_filled:
-					self.client.cancel_order(prev_order_id)
-				# Make a new prediction for the stock
-				price_target = self.predict_stock()
-				print("NEW PREDICTION = $%.3f" % price_target)
-				order['limit_price'] = curr_price
-				if price_target > curr_ask_price:
-					order["order_action"] = "BUY"
-					quantity = int(self.cash // curr_price)
-				elif price_target < curr_bid_price:
-					order["order_action"] = "SELL"
-					quantity = self.shares
-				next_prediction_time = datetime.datetime.now() + prediction_interval
+					self.client.cancel_order(self.prev_order_id)
+				self.update_stock_prediction(order, curr_bid_price, curr_ask_price)
 
-			if quantity > 0 and order["order_action"]:
+			if order["quantity"] > 0 and order["order_action"]:
 				try:
 					# EXECUTE THE ORDER
-					order["quantity"] = quantity
-					prev_order_id = self.client.place_order(order).id
+					self.prev_order_id = self.client.place_order(order).id
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
 						break
-					next_prediction_time = datetime.datetime.now()
+					self.next_prediction_time = datetime.datetime.now()
 					continue
-				print("--> ORDER PLACED: %s %s shares " % (order["order_action"], quantity), end='')
+				print("--> ORDER PLACED: %s %s shares " % (order["order_action"], order["quantity"]), end='')
 				if order["order_action"] == "MARKET":
 					print("@ market price")
 				else:
 					print("@ $%.2f" % order["limit_price"])
 			else:
-				if price_target <= curr_ask_price:
+				if self.price_target <= curr_ask_price:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
-				elif price_target >= curr_bid_price:
+				elif self.price_target >= curr_bid_price:
 					print("NO ACTION:  PRICE TARGET ≥ BID")
 
 			self.print_value(curr_price)
