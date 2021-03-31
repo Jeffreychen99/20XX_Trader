@@ -88,7 +88,7 @@ class Trader:
 		order['limit_price'] = self.price_target
 		if self.price_target > curr_ask_price:
 			order["order_action"] = "BUY"
-			order["quantity"] = int(self.cash // curr_price)
+			order["quantity"] = int(self.cash // curr_ask_price)
 		elif self.price_target < curr_bid_price:
 			order["order_action"] = "SELL"
 			order["quantity"] = self.shares
