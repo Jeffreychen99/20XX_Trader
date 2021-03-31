@@ -30,11 +30,13 @@ class TradingClient:
                 data_feed='iex')
 
         async def trade_callback(trade):
+            #print(trade)
             self.curr_price = trade.price
 
         async def quote_callback(quote):
-            self.bid_price = quote.bidprice
-            self.ask_price = quote.askprice
+            #print(quote)
+            self.bid_price = quote.bid_price
+            self.ask_price = quote.ask_price
 
         self.stream.subscribe_trades(trade_callback, self.symbol)
         self.stream.subscribe_quotes(quote_callback, self.symbol)
@@ -44,14 +46,18 @@ class TradingClient:
             asyncio.set_event_loop(self.stream_event_loop)
             try:
                 self.stream.run()
-            except:
-                pass
+            except (RuntimeError, asyncio.exceptions.CancelledError):
+                print("Stream successfully halted")
 
         streamThread = threading.Thread(target=start_stream)
         streamThread.start()
 
     def halt(self):
         print("Shutting down alpaca client stream...")
+        self.stream.unsubscribe_trades()
+        self.stream.unsubscribe_quotes()
+        for task in asyncio.all_tasks(loop=self.stream_event_loop):
+            task.cancel()
         self.stream_event_loop.stop()
 
     def get_quote(self):
