@@ -56,7 +56,7 @@ class Trader:
 		stock_raw, stock_dat = recent_stock_data(self.stock_ticker)
 		stock_predict = self.model.predict(stock_dat)
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
-		return stock_predict[0][0]
+		return round(stock_predict[0][0], 2)
 
 	def new_order(self):
 		order = {
