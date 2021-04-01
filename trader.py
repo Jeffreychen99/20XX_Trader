@@ -113,7 +113,7 @@ class Trader:
 			self.shares += new_filled_shares * order_type
 			self.cash -= new_filled_shares * order_info['avg_price'] * order_type
 
-			self.prev_filled_shares = order_info['filled_qty']
+		self.prev_filled_shares = 0 if prev_order_filled else order_info['filled_qty']
 		return prev_order_filled
 
 	def trading_loop(self):
@@ -157,6 +157,7 @@ class Trader:
 				# Cancel previous order if not filled
 				if not prev_order_filled:
 					self.client.cancel_order(self.prev_order_id)
+					self.prev_filled_shares = 0
 				self.update_stock_prediction(order, curr_bid_price, curr_ask_price)
 
 			if order["quantity"] > 0 and order["order_action"]:
@@ -180,7 +181,7 @@ class Trader:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
 				elif self.price_target >= curr_bid_price:
 					print("NO ACTION:  PRICE TARGET ≥ BID")
-
+					
 			self.print_value(curr_price)
 
 			try:
