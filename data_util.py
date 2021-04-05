@@ -113,7 +113,7 @@ def recent_stock_data(stock_ticker):
     stock = yf.Ticker(stock_ticker)
     stock_raw = np.ndarray(shape=(0, NUM_FEATURES))
 
-    period = str(2 * POINTS_PER_PERIOD - 1) + UNITS
+    period = str(2 * (POINTS_PER_PERIOD * INTERVAL_UNITS) - 1) + UNITS
     stock_df = stock.history(period=period, interval=INTERVAL)
     stock_raw = stock_df.to_numpy()[:,:NUM_FEATURES]
 
