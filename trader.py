@@ -54,7 +54,7 @@ class Trader:
 	def get_stock_prediction(self):
 		# Pull the most recent stock data 
 		stock_raw, stock_dat = recent_stock_data(self.stock_ticker)
-		stock_predict = self.model.predict(stock_dat)
+		stock_predict = self.model.predict(stock_dat) * CONSERVATIVE_CONST
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return round(stock_predict[0][0], 2)
 
@@ -146,6 +146,7 @@ class Trader:
 			except:
 				if self.prompt_quit():
 					break
+				continue
 
 			# Check if previous order was filled
 			prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
