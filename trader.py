@@ -123,8 +123,10 @@ class Trader:
 			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			order = self.new_order()
 			curr_price = self.client.get_last_price()
-			curr_bid_price = self.client.get_last_bid()
-			curr_ask_price = self.client.get_last_ask()
+			curr_bid_price = self.client.get_last_price()
+			curr_ask_price = self.client.get_last_price()
+			#curr_bid_price = self.client.get_last_bid()
+			#curr_ask_price = self.client.get_last_ask()
 
 			if not self.client.market_is_open():
 				print("AFTER HOURS TRADING - NO ACTION")
