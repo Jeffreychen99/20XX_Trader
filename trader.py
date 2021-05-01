@@ -46,8 +46,8 @@ class Trader:
 		self.shares = 0
 
 		self.price_target = 0.0
-		self.prev_order_id = ''
-		self.prev_filled_shares = 0
+		#self.prev_order_id = ''
+		#self.prev_filled_shares = 0
 		self.next_prediction_time = datetime.datetime.now()
 		self.prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
 
@@ -151,23 +151,27 @@ class Trader:
 				continue
 
 			# Check if previous order was filled
-			prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
+			#prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
 
 			# Make decision based on previous prediction
 			self.update_prediction_time(curr_bid_price, curr_ask_price)
 
 			if self.next_prediction_time < datetime.datetime.now():
 				# Cancel previous order if not filled
-				if not prev_order_filled:
-					self.client.cancel_order(self.prev_order_id)
-					self.prev_filled_shares = 0
+				#if not prev_order_filled:
+				#	self.client.cancel_order(self.prev_order_id)
+				#	self.prev_filled_shares = 0
 				self.update_stock_prediction(order, curr_bid_price, curr_ask_price)
 
 			if order["quantity"] > 0 and order["order_action"]:
 				try:
 					# EXECUTE THE ORDER
-					self.prev_order_id = self.client.place_order(order).id
-					self.prev_filed_shares = 0
+					#self.prev_order_id = self.client.place_order(order).id
+					#self.prev_filed_shares = 0
+					new_filled_shares = order["quantity"] - self.prev_filled_shares
+					order_type = 1 if order["quantity"] == 'BUY' else -1
+					self.shares += new_filled_shares * order_type
+					self.cash -= new_filled_shares * curr_price * order_type
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
@@ -175,10 +179,11 @@ class Trader:
 					self.next_prediction_time = datetime.datetime.now()
 					continue
 				print("--> ORDER PLACED: %s %s shares " % (order["order_action"], order["quantity"]), end='')
-				if order["order_action"] == "MARKET":
-					print("@ market price")
-				else:
-					print("@ $%.2f" % order["limit_price"])
+				#if order["order_action"] == "MARKET":
+				#	print("@ market price")
+				#else:
+				#	print("@ $%.2f" % order["limit_price"])
+				print("@ $%.2f" % curr_price)
 			else:
 				if self.price_target <= curr_ask_price:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
