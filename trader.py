@@ -54,7 +54,7 @@ class Trader:
 	def get_stock_prediction(self):
 		# Pull the most recent stock data 
 		stock_raw, stock_dat = recent_stock_data(self.stock_ticker)
-		stock_predict = self.model.predict(stock_dat) * CONSERVATIVE_CONST
+		stock_predict = self.model.predict(stock_dat) # * CONSERVATIVE_CONST
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return round(stock_predict[0][0], 2)
 
