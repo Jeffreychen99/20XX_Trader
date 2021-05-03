@@ -168,10 +168,9 @@ class Trader:
 					# EXECUTE THE ORDER
 					#self.prev_order_id = self.client.place_order(order).id
 					#self.prev_filed_shares = 0
-					new_filled_shares = order["quantity"] - self.prev_filled_shares
 					order_type = 1 if order["quantity"] == 'BUY' else -1
-					self.shares += new_filled_shares * order_type
-					self.cash -= new_filled_shares * curr_price * order_type
+					self.shares += order["quantity"] * order_type
+					self.cash -= order["quantity"] * curr_price * order_type
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
