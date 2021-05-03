@@ -168,7 +168,7 @@ class Trader:
 					# EXECUTE THE ORDER
 					#self.prev_order_id = self.client.place_order(order).id
 					#self.prev_filed_shares = 0
-					order_type = 1 if order["quantity"] == 'BUY' else -1
+					order_type = 1 if order["action"] == 'BUY' else -1
 					self.shares += order["quantity"] * order_type
 					self.cash -= order["quantity"] * curr_price * order_type
 				except Exception as e:
