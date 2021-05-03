@@ -146,6 +146,7 @@ class Trader:
 			try:
 				self.validate_trader(curr_bid_price, curr_ask_price)
 			except:
+				print("Trader validation went wrong:\n  Shares: %d\n   Cash: $%.2f" % (self.shares, self.cash))
 				if self.prompt_quit():
 					break
 				continue
@@ -168,7 +169,7 @@ class Trader:
 					# EXECUTE THE ORDER
 					#self.prev_order_id = self.client.place_order(order).id
 					#self.prev_filed_shares = 0
-					order_type = 1 if order["action"] == 'BUY' else -1
+					order_type = 1 if order["order_action"] == 'BUY' else -1
 					self.shares += order["quantity"] * order_type
 					self.cash -= order["quantity"] * curr_price * order_type
 				except Exception as e:
