@@ -5,6 +5,7 @@ import sys
 import yfinance as yf
 import json
 
+from order import *
 from config_20XX import *
 
 if MODEL_TYPE == 'TF':
@@ -46,10 +47,10 @@ class Trader:
 		self.shares = 0
 
 		self.price_target = 0.0
-		self.prev_order_id = ''
-		self.prev_filled_shares = 0
 		self.next_prediction_time = datetime.datetime.now()
 		self.prediction_interval = datetime.timedelta(seconds=PREDICTION_INTERVAL)
+
+		self.active_orders = []
 
 	def get_stock_prediction(self):
 		# Pull the most recent stock data 
@@ -57,17 +58,6 @@ class Trader:
 		stock_predict = self.model.predict(stock_dat) * CONSERVATIVE_CONST
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return round(stock_predict[0][0], 2)
-
-	def new_order(self):
-		order = {
-			"price_type": "MARKET",
-			"order_term": "GOOD_FOR_DAY",
-			"symbol": self.stock_ticker,
-			"order_action": "",
-			"limit_price": 0.0,
-			"quantity": 0
-		}
-		return order
 
 	def update_prediction_time(self, curr_bid_price, curr_ask_price):
 		# Make decision based on previous prediction
@@ -82,46 +72,52 @@ class Trader:
 		elif self.price_target:
 			print("PRICE TARGET $%.3f NOT YET MET" % self.price_target)
 
-	def update_stock_prediction(self, order, curr_bid_price, curr_ask_price):
+	def new_order(self, order, curr_bid_price, curr_ask_price):
 		# Make a new prediction for the stock
 		self.price_target = self.get_stock_prediction()
 		print("NEW PREDICTION = $%.3f" % self.price_target)
-		order['limit_price'] = self.price_target
-		if self.price_target > curr_ask_price:
-			order["order_action"] = "BUY"
-			order["quantity"] = int(self.cash // curr_ask_price)
-		elif self.price_target < curr_bid_price:
-			order["order_action"] = "SELL"
-			order["quantity"] = self.shares
 		self.next_prediction_time = datetime.datetime.now() + self.prediction_interval
+
+		# Create an order based on the prediction
+		if self.price_target > curr_ask_price:
+			action = "BUY"
+			qty = int(self.cash // curr_ask_price)
+		elif self.price_target < curr_bid_price:
+			action = "SELL"
+			qty = self.shares
+		else:
+			return None
+		order = MarketOrder(self.stock_ticker, action, qty)
+
 		return order
 
-	def check_previous_order_filled(self):
-		order_info = self.client.get_order_info(self.prev_order_id)
-		prev_order_filled = order_info['filled_qty'] == order_info['qty']
+	def check_previous_orders_filled(self):
+		order_filled = False
+		for order in list(self.active_orders):
+			order_info = self.client.get_order_info(order.id)
+			prev_filled_shares = order.filled_qty
+			order.filled_qty = order_info['filled_qty']
+			order.avg_price = order_info['avg_price']
 
-		s = (order_info['order_action'], order_info['filled_qty'], order_info['qty'], order_info['avg_price'])
-		if prev_order_filled:
-			print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-			self.prev_order_id = ''
-		else:
-			print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+			s = (order.action, order.filled_qty, order.qty, order.avg_price)
+			if order.is_filled():
+				print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+				self.active_orders.remove(order)
+				order_filled = True
+			else:
+				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
-		if order_info['avg_price'] != 0.0:
-			new_filled_shares = order_info['filled_qty'] - self.prev_filled_shares
-			order_type = 1 if order_info['order_action'] == 'BUY' else -1
-			self.shares += new_filled_shares * order_type
-			self.cash -= new_filled_shares * order_info['avg_price'] * order_type
-
-		self.prev_filled_shares = 0 if prev_order_filled else order_info['filled_qty']
-		return prev_order_filled
+			if order.avg_price != 0.0:
+				new_filled_shares = order.filled_qty - prev_filled_shares
+				order_type = 1 if order.action == 'BUY' else -1
+				self.shares += new_filled_shares * order_type
+				self.cash -= new_filled_shares * order.avg_price * order_type
+		return order_filled
 
 	def trading_loop(self):
 
 		while (1):
-
 			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
-			order = self.new_order()
 			curr_price = self.client.get_last_price()
 			curr_bid_price = self.client.get_last_bid()
 			curr_ask_price = self.client.get_last_ask()
@@ -150,34 +146,34 @@ class Trader:
 				continue
 
 			# Check if previous order was filled
-			prev_order_filled = self.prev_order_id == '' or self.check_previous_order_filled()
+			self.check_previous_orders_filled()
 
-			# Make decision based on previous prediction
+			# See if it's time for a new prediction
 			self.update_prediction_time(curr_bid_price, curr_ask_price)
 
+			order = None
 			if self.next_prediction_time < datetime.datetime.now():
 				# Cancel previous order if not filled
-				if not prev_order_filled:
-					self.client.cancel_order(self.prev_order_id)
-					self.prev_filled_shares = 0
-				self.update_stock_prediction(order, curr_bid_price, curr_ask_price)
+				if self.active_orders:
+					self.client.cancel_order(self.active_orders[0].id)
+				order = self.new_order(order, curr_bid_price, curr_ask_price)
 
-			if order["quantity"] > 0 and order["order_action"]:
+			if order and order.qty > 0:
 				try:
 					# EXECUTE THE ORDER
-					self.prev_order_id = self.client.place_order(order).id
-					self.prev_filed_shares = 0
+					order.place(self.client)
+					self.active_orders.append(order)
 				except Exception as e:
 					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
 						break
 					self.next_prediction_time = datetime.datetime.now()
 					continue
-				print("--> ORDER PLACED: %s %s shares " % (order["order_action"], order["quantity"]), end='')
-				if order["order_action"] == "MARKET":
+				print("--> ORDER PLACED: %s %s shares " % (order.action, order.qty), end='')
+				if type(order) == MarketOrder:
 					print("@ market price")
-				else:
-					print("@ $%.2f" % order["limit_price"])
+				elif type(order) == LimitOrder:
+					print("@ $%.2f" % order.limit_price)
 			else:
 				if self.price_target <= curr_ask_price:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
