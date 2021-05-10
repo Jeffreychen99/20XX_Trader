@@ -144,6 +144,7 @@ class Trader:
 			try:
 				self.validate_trader(curr_bid_price, curr_ask_price)
 			except:
+				print("Trader validation went wrong:\n  Shares: %d\n   Cash: $%.2f" % (self.shares, self.cash))
 				if self.prompt_quit():
 					break
 				continue
