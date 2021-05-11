@@ -80,27 +80,30 @@ class Trader:
 			print("@ $%.2f" % order.limit_price)
 
 	def act(self, curr_bid_price, curr_ask_price):
-		# Cancel previous order if not filled
-		if self.active_orders:
-			self.client.cancel_order(self.active_orders[0].id)
-
 		# Make a new prediction for the stock
 		self.price_target = self.get_stock_prediction()
 		print("NEW PREDICTION = $%.3f" % self.price_target)
 		self.next_prediction_time = datetime.datetime.now() + self.prediction_interval
 
-		# Create an order based on the prediction
-		if self.price_target > curr_ask_price:
-			action = "BUY"
-			qty = int(self.cash // curr_ask_price)
-		elif self.price_target < curr_bid_price:
-			action = "SELL"
-			qty = self.shares
-		else:
+		if self.price_target < curr_bid_price and self.shares > 0:
+			# Cancel all active orders
+			for active_order in self.active_orders:
+				self.client.cancel_order(active_order.id)
+			self.active_orders = []
+			# Sell all shares
+			self.place_order( MarketOrder(self.stock_ticker, "SELL", self.shares) )
+			return
+		elif self.price_target < curr_ask_price:
 			return
 
-		order = MarketOrder(self.stock_ticker, action, qty)
-		self.place_order(order)
+		qty = int(self.cash // curr_ask_price)
+		if qty == 0:
+			return
+
+		# Place a market buy
+		self.place_order( MarketOrder(self.stock_ticker, "BUY", qty) )
+		# Place a limit sell order at 1 cent above ask_price to make a profit
+		self.place_order( LimitOrder(self.stock_ticker, "SELL", curr_ask_price + 0.01, qty) )
 
 	def check_previous_orders_filled(self):
 		order_filled = False
