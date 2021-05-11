@@ -166,15 +166,8 @@ class Trader:
 			self.update_prediction_time(curr_bid_price, curr_ask_price)
 
 			if self.next_prediction_time < datetime.datetime.now():
-				try:
-					# Act on the information
-					self.act(curr_bid_price, curr_ask_price)
-				except Exception as e:
-					print("\n\n########## TRADER ACTION ERROR ##########\n%s: %s" % (type(e).__name__, e))
-					if self.prompt_quit():
-						break
-					self.next_prediction_time = datetime.datetime.now()
-					continue
+				# Act on the information
+				self.act(curr_bid_price, curr_ask_price)
 			else:
 				if self.price_target <= curr_ask_price:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
