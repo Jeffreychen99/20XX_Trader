@@ -72,7 +72,20 @@ class Trader:
 		elif self.price_target:
 			print("PRICE TARGET $%.3f NOT YET MET" % self.price_target)
 
-	def new_order(self, order, curr_bid_price, curr_ask_price):
+	def place_order(self, order):
+		order.place(self.client)
+		self.active_orders.append(order)
+		print("--> ORDER PLACED: %s %s shares " % (order.action, order.qty), end='')
+		if type(order) == MarketOrder:
+			print("@ Market price")
+		elif type(order) == LimitOrder:
+			print("@ $%.2f" % order.limit_price)
+
+	def act(self, curr_bid_price, curr_ask_price):
+		# Cancel previous order if not filled
+		if self.active_orders:
+			self.client.cancel_order(self.active_orders[0].id)
+
 		# Make a new prediction for the stock
 		self.price_target = self.get_stock_prediction()
 		print("NEW PREDICTION = $%.3f" % self.price_target)
@@ -86,10 +99,10 @@ class Trader:
 			action = "SELL"
 			qty = self.shares
 		else:
-			return None
-		order = MarketOrder(self.stock_ticker, action, qty)
+			return
 
-		return order
+		order = MarketOrder(self.stock_ticker, action, qty)
+		self.place_order(order)
 
 	def check_previous_orders_filled(self):
 		order_filled = False
@@ -151,29 +164,16 @@ class Trader:
 			# See if it's time for a new prediction
 			self.update_prediction_time(curr_bid_price, curr_ask_price)
 
-			order = None
 			if self.next_prediction_time < datetime.datetime.now():
-				# Cancel previous order if not filled
-				if self.active_orders:
-					self.client.cancel_order(self.active_orders[0].id)
-				order = self.new_order(order, curr_bid_price, curr_ask_price)
-
-			if order and order.qty > 0:
 				try:
-					# EXECUTE THE ORDER
-					order.place(self.client)
-					self.active_orders.append(order)
+					# Act on the information
+					self.act(curr_bid_price, curr_ask_price)
 				except Exception as e:
-					print("\n\n########## PLACE ORDER ERROR ##########\n%s: %s" % (type(e).__name__, e))
+					print("\n\n########## TRADER ACTION ERROR ##########\n%s: %s" % (type(e).__name__, e))
 					if self.prompt_quit():
 						break
 					self.next_prediction_time = datetime.datetime.now()
 					continue
-				print("--> ORDER PLACED: %s %s shares " % (order.action, order.qty), end='')
-				if type(order) == MarketOrder:
-					print("@ market price")
-				elif type(order) == LimitOrder:
-					print("@ $%.2f" % order.limit_price)
 			else:
 				if self.price_target <= curr_ask_price:
 					print("NO ACTION:  PRICE TARGET ≤ ASK")
