@@ -115,8 +115,10 @@ class Trader:
 				print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 				self.active_orders.remove(order)
 				order_filled = True
-				# Place a limit sell order at 1 cent above avg_price to make a profit
-				self.place_order( LimitOrder(self.stock_ticker, "SELL", order.avg_price + 0.01, order.filled_qty) )
+
+				if order.action == "BUY":
+					# Place a limit sell order at 1 cent above avg_price to make a profit
+					self.place_order( LimitOrder(self.stock_ticker, "SELL", order.avg_price + 0.01, order.filled_qty) )
 			else:
 				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
