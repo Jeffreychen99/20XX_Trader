@@ -102,11 +102,8 @@ class Trader:
 
 		# Place a market buy
 		self.place_order( MarketOrder(self.stock_ticker, "BUY", qty) )
-		# Place a limit sell order at 1 cent above ask_price to make a profit
-		self.place_order( LimitOrder(self.stock_ticker, "SELL", curr_ask_price + 0.01, qty) )
 
 	def check_previous_orders_filled(self):
-		order_filled = False
 		for order in list(self.active_orders):
 			order_info = self.client.get_order_info(order.id)
 			prev_filled_shares = order.filled_qty
@@ -118,6 +115,8 @@ class Trader:
 				print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 				self.active_orders.remove(order)
 				order_filled = True
+				# Place a limit sell order at 1 cent above avg_price to make a profit
+				self.place_order( LimitOrder(self.stock_ticker, "SELL", order.avg_price + 0.01, order.filled_qty) )
 			else:
 				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
@@ -126,7 +125,6 @@ class Trader:
 				order_type = 1 if order.action == "BUY" else -1
 				self.shares += new_filled_shares * order_type
 				self.cash -= new_filled_shares * order.avg_price * order_type
-		return order_filled
 
 	def trading_loop(self):
 
