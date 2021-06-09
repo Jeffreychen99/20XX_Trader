@@ -108,7 +108,7 @@ class Trader:
 			order_info = self.client.get_order_info(order.id)
 			prev_filled_shares = order.filled_qty
 			order.filled_qty = order_info['filled_qty']
-			order.avg_price = order_info['avg_price']
+			order.avg_price = order_info['avg_price'] if order.price_type == 'MARKET' else order.limit_price
 
 			s = (order.action, order.filled_qty, order.qty, order.avg_price)
 			if order.is_filled():
