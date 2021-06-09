@@ -4,11 +4,6 @@ import numpy as np
 import pandas as pd
 
 from config_20XX import *
-if MODEL_TYPE == 'TORCH':
-    import torch
-    from torch.utils.data import DataLoader
-    from torch.utils.data import Dataset
-    from torch.utils.data import sampler
 
 import warnings
 warnings.filterwarnings('ignore')
