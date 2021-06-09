@@ -119,6 +119,8 @@ class Trader:
 				if order.action == "BUY":
 					# Place a limit sell order at 1 cent above avg_price to make a profit
 					self.place_order( LimitOrder(self.stock_ticker, "SELL", order.avg_price + 0.01, order.filled_qty) )
+				elif type(order) == LimitOrder:
+					next_prediction_time = datetime.datetime.now()
 			else:
 				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
