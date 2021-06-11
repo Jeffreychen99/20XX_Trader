@@ -2,7 +2,6 @@ from config_20XX import *
 
 # Should not directly use the Order class
 class Order:
-
 	def __init__(self, symbol, action, qty=0):
 		self.symbol = symbol.upper()
 		self.action = action.upper()
@@ -16,21 +15,18 @@ class Order:
 	def is_filled(self):
 		return self.filled_qty == self.qty
 
-	def as_dict(self):
+	def dict(self):
 		self.validate()
 		order = {
 			"price_type": self.price_type,
-			"order_term": "GOOD_FOR_DAY",
 			"symbol": self.symbol,
-			"order_action": self.action,
-			"quantity": self.qty
+			"action": self.action,
+			"qty": self.qty
 		}
-		if self.price_type == "LIMIT":
-			order["limit_price"] == self.limit_price
 		return order
 
 	def place(self, client):
-		self.id = client.place_order(self.as_dict()).id
+		self.id = client.place_order(self.dict()).id
 		return self.id
 
 
@@ -52,7 +48,7 @@ class LimitOrder(Order):
 		super().validate()
 		assert 	type(self.limit_price) == float or type(self.limit_price) == int
 
-	def as_dict(self):
-		order = super().as_dict()
+	def dict(self):
+		order = super().dict()
 		order["limit_price"] = self.limit_price
 		return order

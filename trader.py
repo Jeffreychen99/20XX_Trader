@@ -6,6 +6,8 @@ import yfinance as yf
 import json
 
 from order import *
+from alpaca.client import TradingClient
+
 from config_20XX import *
 
 if MODEL_TYPE == 'TF':
@@ -14,7 +16,6 @@ elif MODEL_TYPE == 'TORCH':
 	from model_pytorch import *
 from data_util import *
 
-from alpaca.client import TradingClient
 
 
 class Logger(object):
@@ -119,7 +120,7 @@ class Trader:
 
 			if order.avg_price != 0.0:
 				new_filled_shares = order.filled_qty - prev_filled_shares
-				order_type = 1 if order.action == 'BUY' else -1
+				order_type = 1 if order.action == "BUY" else -1
 				self.shares += new_filled_shares * order_type
 				self.cash -= new_filled_shares * order.avg_price * order_type
 		return order_filled

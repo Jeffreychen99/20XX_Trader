@@ -75,8 +75,8 @@ class TradingClient:
     def place_order(self, order):
         return self.api.submit_order(
             symbol=order['symbol'].upper(),
-            qty=int(order['quantity']),
-            side=order['order_action'].lower(),
+            qty=int(order['qty']),
+            side=order['action'].lower(),
             type=order['price_type'].lower(),
             limit_price=float(order['limit_price']) if order['price_type'].lower() == 'limit' else None,
             time_in_force='gtc'
@@ -89,7 +89,7 @@ class TradingClient:
             'filled_qty': int(order.filled_qty),
             'qty': int(order.qty),
             'avg_price': p,
-            'order_action': order.side.upper()
+            'action': order.side.upper()
         }
         return  info
 
