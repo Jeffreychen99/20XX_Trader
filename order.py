@@ -1,8 +1,4 @@
 from config_20XX import *
-if CLIENT_TYPE == 'ETRADE':
-	from etrade.client import TradingClient
-elif CLIENT_TYPE == 'ALPACA':
-	from alpaca.client import TradingClient
 
 # Should not directly use the Order class
 class Order:
