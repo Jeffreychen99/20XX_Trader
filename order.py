@@ -1,15 +1,14 @@
-from config_20XX import *
-
 # Should not directly use the Order class
 class Order:
-	def __init__(self, symbol, action, qty=0):
+	def __init__(self, symbol, qty=0):
 		self.symbol = symbol.upper()
-		self.action = action.upper()
 		self.qty = qty
 		self.filled_qty = 0
 
 	def validate(self):
 		assert type(self.qty) == float or type(self.qty) == int
+
+		assert hasattr(self, "action")
 		assert self.action == "BUY" or self.action == "SELL"
 
 	def is_filled(self):
@@ -31,24 +30,38 @@ class Order:
 
 
 
+class BuyOrder(Order):
+	action = "BUY"
+
+class SellOrder(Order):
+	action = "SELL"
+
+
 class MarketOrder(Order):
-	def __init__(self, symbol, action, qty=0):
-		super().__init__(symbol, action, qty)
-		self.price_type = "MARKET"
-
-
+	price_type = "MARKET"
 
 class LimitOrder(Order):
-	def __init__(self, symbol, action, limit_price, qty=0):
-		super().__init__(symbol, action, qty)
-		self.price_type = "LIMIT"
+	price_type = "LIMIT"
+
+	def __init__(self, symbol, limit_price, qty=0):
+		super().__init__(symbol, qty)
 		self.limit_price = limit_price
 
 	def validate(self):
 		super().validate()
-		assert 	type(self.limit_price) == float or type(self.limit_price) == int
+		assert type(self.limit_price) == float or type(self.limit_price) == int
+		assert self.limit_price > 0.0 
 
 	def dict(self):
 		order = super().dict()
 		order["limit_price"] = self.limit_price
 		return order
+
+
+
+# Dynamic inheritance function
+def newOrder(symbol, order_action_class, price_type_class, limit_price=0.0, qty=0):
+	class DynamicOrder(order_action_class, price_type_class):
+		pass
+	order = DynamicOrder(symbol, qty) if price_type_class != LimitOrder else DynamicOrder(symbol, limit_price, qty)
+	return order
