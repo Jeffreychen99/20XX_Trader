@@ -57,6 +57,10 @@ class Trader:
 		stock_predict = unnormalize_data(stock_raw, stock_predict, [[0]])[0]
 		return round(stock_predict[0][0], 2)
 
+	def place_order(self, order):
+		order.place(self.client)
+		self.active_orders.append(order)
+
 	def update_prediction_time(self, curr_bid_price, curr_ask_price):
 		# Make decision based on previous prediction
 		if (self.shares == 0 or self.cash >= curr_ask_price) and curr_ask_price <= self.price_target:
@@ -70,14 +74,32 @@ class Trader:
 		elif self.price_target:
 			print("PRICE TARGET $%.3f NOT YET MET" % self.price_target)
 
-	def place_order(self, order):
-		order.place(self.client)
-		self.active_orders.append(order)
-		print("--> ORDER PLACED: %s %s shares " % (order.action, order.qty), end='')
-		if type(order) == MarketOrder:
-			print("@ Market price")
-		elif type(order) == LimitOrder:
-			print("@ $%.2f" % order.limit_price)
+	def check_active_order_filled(self, order):
+		assert order in self.active_orders
+		prev_filled_shares = order.filled_qty
+
+		filled = order.is_filled()
+		# Update shares and cash if order was filled at all
+		new_filled_shares = order.filled_qty - prev_filled_shares
+		if filled:
+			order_type = 1 if order.action == "BUY" else -1
+			self.shares += new_filled_shares * order_type
+			self.cash -= new_filled_shares * order.avg_price * order_type
+
+			self.active_orders.remove(order)
+
+		return filled
+
+	def check_active_orders_filled(self):
+		for order in list(self.active_orders):
+			if self.check_active_order_filled(order):
+				if filled and self.action == "BUY":
+					# Place a limit sell order at 1 cent above avg_price to make a profit
+					limit_price = round(order.avg_price + 0.01, 2)
+					limit_order = LimitOrder(self.stock_ticker, "SELL", limit_price, order.qty)
+					self.place_order(limit_order)
+				elif isinstance(order, LimitOrder):
+					self.next_prediction_time = datetime.datetime.now()
 
 	def act(self, curr_bid_price, curr_ask_price):
 		# Make a new prediction for the stock
@@ -88,48 +110,18 @@ class Trader:
 		if self.price_target < curr_bid_price and self.shares > 0:
 			# Cancel all active orders
 			for active_order in self.active_orders:
-				self.client.cancel_order(active_order.id)
+				active_order.cancel(self.client)
+				self.check_active_order_filled(active_order)
 			self.active_orders = []
-			# Sell all shares
-			self.place_order( MarketOrder(self.stock_ticker, "SELL", self.shares) )
-			return
-		elif self.price_target < curr_ask_price:
-			return
 
-		qty = int(self.cash // curr_ask_price)
-		if qty == 0:
-			return
-
-		# Place a market buy
-		self.place_order( MarketOrder(self.stock_ticker, "BUY", qty) )
-
-	def check_previous_orders_filled(self):
-		for order in list(self.active_orders):
-			order_info = self.client.get_order_info(order.id)
-			prev_filled_shares = order.filled_qty
-			order.filled_qty = order_info['filled_qty']
-			order.avg_price = order_info['avg_price'] if order.price_type == 'MARKET' else order.limit_price
-
-			s = (order.action, order.filled_qty, order.qty, order.avg_price)
-			if order.is_filled():
-				print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-				self.active_orders.remove(order)
-				order_filled = True
-
-				if order.action == "BUY":
-					# Place a limit sell order at 1 cent above avg_price to make a profit
-					limit_price = round(order.avg_price + 0.01, 2)
-					self.place_order( LimitOrder(self.stock_ticker, "SELL", limit_price, order.filled_qty) )
-				elif type(order) == LimitOrder:
-					next_prediction_time = datetime.datetime.now()
-			else:
-				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-
-			if order.avg_price != 0.0:
-				new_filled_shares = order.filled_qty - prev_filled_shares
-				order_type = 1 if order.action == "BUY" else -1
-				self.shares += new_filled_shares * order_type
-				self.cash -= new_filled_shares * order.avg_price * order_type
+			if self.shares > 0:
+				# Sell all shares
+				self.place_order( MarketOrder(self.stock_ticker, "SELL", self.shares) )
+		elif self.price_target > curr_ask_price:
+			qty = int(self.cash // curr_ask_price)
+			if qty > 0:
+				order = MarketOrder(self.stock_ticker, "BUY", qty)
+				self.place_order(order)
 
 	def trading_loop(self):
 
@@ -163,7 +155,9 @@ class Trader:
 				continue
 
 			# Check if previous order was filled
-			self.check_previous_orders_filled()
+			order_filled = self.check_previous_orders_filled()
+			if order_filled:
+				continue
 
 			# See if it's time for a new prediction
 			self.update_prediction_time(curr_bid_price, curr_ask_price)
