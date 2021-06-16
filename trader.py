@@ -1,7 +1,7 @@
-import argparse
-import datetime, pytz, holidays
+import datetime
+import pytz
+import holidays
 import time
-import sys
 import yfinance as yf
 import json
 
@@ -15,21 +15,6 @@ if MODEL_TYPE == 'TF':
 elif MODEL_TYPE == 'TORCH':
 	from model_pytorch import *
 from data_util import *
-
-
-
-class Logger(object):
-	def __init__(self):
-		self.terminal = sys.stdout
-
-	def write(self, message):
-		log_datetime = datetime.datetime.now(tz).strftime("%m-%d-%Y")
-		with open ("logs/trader_%s.log" % log_datetime, 'a') as self.log:            
-			self.log.write(message)
-		self.terminal.write(message)
-
-	def flush(self):
-		pass
 
 
 
@@ -78,7 +63,7 @@ class Trader:
 		assert order in self.active_orders
 		prev_filled_shares = order.filled_qty
 
-		filled = order.is_filled()
+		filled = order.is_filled(self.client)
 		# Update shares and cash if order was filled at all
 		new_filled_shares = order.filled_qty - prev_filled_shares
 		if filled:
@@ -93,7 +78,7 @@ class Trader:
 	def check_active_orders_filled(self):
 		for order in list(self.active_orders):
 			if self.check_active_order_filled(order):
-				if filled and self.action == "BUY":
+				if order.is_filled(self.client) and order.action == "BUY":
 					# Place a limit sell order at 1 cent above avg_price to make a profit
 					limit_price = round(order.avg_price + 0.01, 2)
 					limit_order = LimitOrder(self.stock_ticker, "SELL", limit_price, order.qty)
@@ -125,6 +110,8 @@ class Trader:
 
 	def trading_loop(self):
 
+		tz = pytz.timezone('US/Eastern')
+
 		while (1):
 			print("\n---\n%s" % datetime.datetime.now(tz).strftime("%H:%M:%S,  %m/%d/%Y"))
 			curr_price = self.client.get_last_price()
@@ -155,12 +142,13 @@ class Trader:
 				continue
 
 			# Check if previous order was filled
-			order_filled = self.check_previous_orders_filled()
+			order_filled = self.check_active_orders_filled()
 			if order_filled:
 				continue
 
-			# See if it's time for a new prediction
-			self.update_prediction_time(curr_bid_price, curr_ask_price)
+			if not any([order for order in self.active_orders if isinstance(order, MarketOrder)]):
+				# See if it's time for a new prediction
+				self.update_prediction_time(curr_bid_price, curr_ask_price)
 
 			if self.next_prediction_time < datetime.datetime.now():
 				# Act on the information
@@ -213,47 +201,3 @@ class Trader:
 		r = (value/self.init_cash - 1) * 100
 		print("TOTAL'S RETURN:  %% %.2f" % r, "   🚀🚀🚀" if r > 0 else "")
 		print("***********************************************************")
-
-
-
-def get_args():
-	parser = argparse.ArgumentParser(description='Trade some stonks.')
-	parser.add_argument('--t', dest='ticker',
-						type=str, required=False,
-						help='the ticker of the stock to be traded')
-	parser.add_argument('--m', dest='model',
-						type=str, required=False,
-						help='the path of the file in which the model has been saved')
-	return parser.parse_args()
-
-
-if __name__ == '__main__':
-	args = get_args()
-
-	if args.ticker:
-		STOCK_TICKER = args.ticker
-	STOCK_TICKER = STOCK_TICKER.upper()
-
-	stock_raw, stock_dat, stock_labels = model_stock_data(STOCK_TICKER)
-	train_x, train_y, test_x, test_y = partition_data(TRAINING_SET_THRESH, stock_dat, stock_labels)
-	train_x, train_y, val_x, val_y = partition_data(TRAINING_SET_THRESH, train_x, train_y)
-	input_frame_shape = (stock_dat.shape[1], stock_dat.shape[2])
-
-	if args.model:
-		load_model(args.model)
-	else:
-		model = generate_model(input_frame_shape)
-		train_model(model, train_x, train_y, val_x, val_y)
-		eval_model(STOCK_TICKER, model, test_x, test_y)
-
-	trading_client = TradingClient(STOCK_TICKER)
-	trader = Trader(STOCK_TICKER, model, trading_client, INIT_CASH)
-
-	ask_continue = input("\n**********\nCONFRIM TRADER START WITH THIS MODEL (y/n): ").lower()
-	if ask_continue != 'y':
-		exit(0)
-
-	tz = pytz.timezone('US/Eastern')
-	sys.stdout = Logger()
-
-	trader.trading_loop()
