@@ -96,6 +96,9 @@ class TradingClient:
     def get_order(self, order_id):
         return self.api.get_order(order_id)
 
+    def get_active_order_ids(self):
+        return [order.client_order_id for order in self.api.list_orders()]
+
     def cancel_order(self, order_id):
         return self.api.cancel_order(order_id)
 

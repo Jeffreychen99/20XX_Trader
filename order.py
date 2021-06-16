@@ -22,11 +22,12 @@ class Order:
 		self.filled_qty = order_info['filled_qty']
 		self.avg_price = order_info['avg_price'] if self.price_type == "MARKET" else self.limit_price
 
-		s = (self.action, self.filled_qty, self.qty, self.avg_price)
-		if self.filled_qty == self.qty:
-			print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
-		else:
-			print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+		if self.active:
+			s = (self.action, self.filled_qty, self.qty, self.avg_price)
+			if self.filled_qty == self.qty:
+				print("--> ORDER FILLED: %s %s/%s shares @ avg price $%.2f" % s)
+			else:
+				print("--> ORDER NOT YET FILLED: %s %s/%s shares @ avg price $%.2f" % s)
 
 		return self.filled_qty == self.qty
 

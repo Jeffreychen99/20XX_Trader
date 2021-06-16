@@ -99,6 +99,9 @@ class Trader:
 				self.check_active_order_filled(active_order)
 			self.active_orders = []
 
+			while self.client.get_active_order_ids():
+				time.sleep(0.5)
+
 			if self.shares > 0:
 				# Sell all shares
 				self.place_order( MarketOrder(self.stock_ticker, "SELL", self.shares) )
